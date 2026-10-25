@@ -24,6 +24,38 @@ public class GlobalExceptionHandler {
         );
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
+    
+        @ExceptionHandler(IllegalStateException.class)
+        public ResponseEntity<ErrorResponse> handleIllegalStateException(
+                IllegalStateException ex) {
+
+            if (ex.getMessage() != null
+                     && ex.getMessage().contains("AI model is currently busy")) {
+
+            ErrorResponse error = new ErrorResponse(
+            HttpStatus.SERVICE_UNAVAILABLE.value(),
+                 "Service Unavailable",
+                    ex.getMessage()
+            );
+
+                return new ResponseEntity<>(
+                    error,
+                    HttpStatus.SERVICE_UNAVAILABLE
+            );
+            }
+
+            ErrorResponse error = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal Server Error",
+                "The AI service encountered an error. Please try again later."
+            );  
+
+            return new ResponseEntity<>(
+                error,
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {

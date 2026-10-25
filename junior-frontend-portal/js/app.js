@@ -438,12 +438,177 @@ function showView(viewName) {
  * with an actual API call to the Spring Boot backend.
  * @param {number} postId — the ID of the senior post
  */
-function handleGenerateRoadmap(postId) {
-  // TODO: Replace with API call — POST /api/roadmap/generate { postId, juniorId }
-  showToast(
-    "Personalised roadmap generation will be connected when the backend integration is ready."
+      
+async function handleGenerateRoadmap(postId) {
+  const button = document.querySelector(
+    ".post-card button[aria-label]"
   );
+
+  let token = null;
+
+  try {
+    token = localStorage.getItem("jwt");
+  } catch (_) {
+    showToast("Unable to access your login session.");
+    return;
+  }
+
+  if (!token) {
+    showToast("Please log in first to generate your roadmap.");
+    return;
+  }
+
+  const post = MOCK_POSTS.find(function (item) {
+    return item.id === postId;
+  });
+
+  if (!post) {
+    showToast("Could not find the selected senior post.");
+    return;
+  }
+
+  const goal = "Prepare for a software engineering career based on this senior's experience: "
+    + post.title;
+
+  const originalText = button ? button.textContent : "";
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Generating roadmap...";
+  }
+
+  showToast("Generating your personalised roadmap...");
+
+  try {
+    const response = await fetch(
+      "http://localhost:8080/api/v1/ai-assistant/generate-path",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({
+          goal: goal,
+          currentSemester: 3,
+          currentCgpa: 9.13
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      if (response.status === 401) {
+        throw new Error("Your session has expired. Please log in again.");
+      }
+
+      if (response.status === 403) {
+        throw new Error("You don't have permission to generate this roadmap.");
+      }
+
+      throw new Error(
+        result.message || "Roadmap generation failed. Please try again."
+      );
+    }
+
+    renderGeneratedRoadmap(result.data);
+
+  } catch (error) {
+    console.error("Roadmap generation error:", error);
+
+    showToast(
+      error.message.includes("Failed to fetch")
+        ? "Cannot connect to the backend. Check that Spring Boot is running."
+        : error.message || "Something went wrong while generating the roadmap."
+    );
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
 }
+
+function renderGeneratedRoadmap(data) {
+  mainContent.textContent = "";
+
+  const wrap = createElement("div", "senior-posts-feed");
+
+  const backButton = createElement(
+    "button",
+    "btn-primary",
+    "← Back to Senior Experiences"
+  );
+
+  backButton.type = "button";
+  backButton.addEventListener("click", function () {
+    showView("my-profile");
+    showView("senior-posts");
+  });
+
+  wrap.appendChild(backButton);
+
+  wrap.appendChild(
+    createElement("h2", "view-heading", "Your Personalised Roadmap")
+  );
+
+  wrap.appendChild(
+    createElement("p", "view-subtitle", "Goal: " + data.goal)
+  );
+
+  wrap.appendChild(
+    createElement("h3", "post-card__journey-heading", "Semester-wise Milestones")
+  );
+
+  const timeline = createElement("div", "timeline");
+
+  (data.adaptiveMilestones || []).forEach(function (milestone) {
+    const step = createElement("div", "timeline__step");
+    step.appendChild(createElement("p", "timeline__desc", milestone));
+    timeline.appendChild(step);
+  });
+
+  wrap.appendChild(timeline);
+
+  wrap.appendChild(
+    createElement("h3", "post-card__journey-heading", "Recommended Skills")
+  );
+
+  const skills = createElement("div", "post-card__tags");
+
+  (data.recommendedRoadmapSkills || []).forEach(function (skill) {
+    skills.appendChild(createElement("span", "tag tag--acad", skill));
+  });
+
+  wrap.appendChild(skills);
+
+  const adviceCard = createElement("article", "post-card");
+
+  adviceCard.appendChild(
+    createElement("h3", "post-card__title", "Senior Mentor Advice")
+  );
+
+  adviceCard.appendChild(
+    createElement("p", "post-card__summary", data.seniorMentorAdvice || "No additional advice available.")
+  );
+
+  wrap.appendChild(adviceCard);
+
+  if (data.generatedAt) {
+    wrap.appendChild(
+      createElement(
+        "p",
+        "view-subtitle",
+        "Generated at: " + new Date(data.generatedAt).toLocaleString()
+      )
+    );
+  }
+
+  mainContent.appendChild(wrap);
+}
+
 
 // ───────────────────────────────────────────
 // 9. MOBILE SIDEBAR TOGGLE
