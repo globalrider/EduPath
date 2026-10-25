@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Edupath · Senior Portal</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+
+    --tag-acad: #dbeafe;
+    --tag-acad-txt: #1e40af;
+    --tag-intern: #dcfce7;
+    --tag-intern-txt: #166534;
+    --tag-high: #fef3c7;
+    --tag-high-txt: #92400e;
+  }
+  * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-size: 0.95rem; line-height: 1.6; }
+
+  /* Header */
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); }
+  .topbar-inner { max-width: 1120px; margin: 0 auto; padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .brand { font-weight: 700; font-size: 1.15rem; color: var(--primary); }
+  .switch { display: flex; gap: 0.25rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.2rem; }
+  .switch a { padding: 0.35rem 0.9rem; border-radius: 4px; font-size: 0.85rem; font-weight: 600; color: var(--muted); text-decoration: none; }
+  .switch a.active { background: var(--primary); color: #fff; }
+  .switch a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  /* Layout */
+  main { max-width: 1120px; margin: 0 auto; padding: 1.5rem; }
+  .page-head h1 { margin: 0 0 0.25rem; font-size: 1.5rem; font-weight: 700; }
+  .page-head p { margin: 0 0 1.5rem; color: var(--muted); }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start; }
+  .stack { display: grid; gap: 1.5rem; }
+  .preview { position: sticky; top: 1rem; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .preview { position: static; } }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .card h2 { margin: 0 0 0.25rem; font-size: 1.05rem; font-weight: 700; }
+  .card .sub { margin: 0 0 1.25rem; color: var(--muted); font-size: 0.85rem; }
+
+  /* Form */
+  .field { margin-bottom: 1rem; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; }
+  .opt { font-weight: 400; color: var(--muted); }
+  .req { color: #b91c1c; margin-left: 0.2rem; font-weight: 700; }
+  input, select, textarea { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.75rem; font-size: 0.9rem; color: var(--text); }
+  textarea { resize: vertical; min-height: 90px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; border-color: var(--primary); }
+  .invalid { border-color: #b91c1c; }
+  .err { color: #b91c1c; font-size: 0.78rem; margin-top: 0.25rem; }
+  .hint { color: var(--muted); font-size: 0.78rem; margin-top: 0.3rem; }
+  .row { display: grid; gap: 1rem; }
+  .row.c3 { grid-template-columns: 1fr 2fr 1fr; }
+  .row.c2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 640px) { .row.c3, .row.c2 { grid-template-columns: 1fr; } }
+
+  /* Buttons */
+  .btn { background: var(--primary); color: #fff; border: 0; border-radius: 6px; padding: 0.65rem 1.25rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+  .btn:hover { background: var(--primary-dark); }
+  .btn:focus-visible { outline: 2px solid var(--primary-dark); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn.ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn.ghost:hover { background: var(--bg); }
+  .btn.small { padding: 0.4rem 0.75rem; }
+
+  /* Achievements */
+  .ach { border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; background: var(--bg); }
+  .ach-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .ach-head strong { font-size: 0.85rem; }
+  .ach .field:last-child { margin-bottom: 0; }
+
+  /* Tags */
+  .tag { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+  .tag.acad { background: var(--tag-acad); color: var(--tag-acad-txt); }
+  .tag.intern { background: var(--tag-intern); color: var(--tag-intern-txt); }
+  .tag.high { background: var(--tag-high); color: var(--tag-high-txt); }
+
+  /* Preview */
+  .preview h3 { margin: 0.6rem 0 0.2rem; font-size: 1rem; }
+  .preview .by { color: var(--muted); font-size: 0.82rem; margin: 0 0 0.75rem; }
+  .preview ul { list-style: none; margin: 0 0 0.75rem; padding: 0; display: grid; gap: 0.5rem; }
+  .preview li { border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.65rem; font-size: 0.85rem; }
+  .preview li small { display: block; color: var(--muted); }
+  .preview .excerpt { color: var(--muted); font-size: 0.85rem; margin: 0; }
+  .placeholder { color: var(--muted); font-style: italic; }
+
+  .actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+  .status { display: none; margin-top: 1rem; padding: 0.65rem 0.8rem; border-radius: 6px; font-size: 0.85rem; }
+  .status.ok { display: block; background: var(--tag-intern); color: var(--tag-intern-txt); }
+  .status.bad { display: block; background: #fee2e2; color: #991b1b; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">Edupath</span>
+    <nav class="switch" aria-label="Portal switch">
+      <a href="/feed">Junior Portal</a>
+      <a href="/senior/create" class="active" aria-current="page">Senior Portal</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="page-head">
+    <h1>Share Your Journey</h1>
+    <p>Show juniors what you achieved and how you got there. Real results make your advice believable. Questions marked <span class="req" aria-hidden="true">*</span> are required.</p>
+  </div>
+
+  <form id="form" class="layout" novalidate>
+    <div class="stack">
+
+      <!-- 1. Basics -->
+      <section class="card" aria-labelledby="h-basics">
+        <h2 id="h-basics">1. About this guide</h2>
+        <p class="sub">Your name comes from your account, so you only need to add these details.</p>
+
+        <div class="field">
+          <label for="category">Target section <span class="req" aria-hidden="true">*</span></label>
+          <select id="category" name="category" aria-required="true">
+            <option value="academics">Academics (sem routine, CGPA strategy, core subjects)</option>
+            <option value="internships">Internships (interview rounds, resume, DSA)</option>
+            <option value="higher-studies">Higher Studies (GATE, GRE, CAT, research)</option>
+          </select>
+        </div>
+        <div class="row c3">
+          <div class="field">
+            <label for="year">Year of study <span class="req" aria-hidden="true">*</span></label>
+            <select id="year" name="yearOfStudy" aria-required="true">
+              <option value="">Select</option>
+              <option value="1">1st Year</option><option value="2">2nd Year</option>
+              <option value="3">3rd Year</option><option value="4">4th / Final Year</option><option value="5">Alumni</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="company">Company / placement / university <span class="req" aria-hidden="true">*</span></label>
+            <input id="company" name="company" aria-required="true" maxlength="100" placeholder="e.g., Placed at Zoho" />
+          </div>
+          <div class="field">
+            <label for="cgpa">Current CGPA <span class="opt">(optional)</span></label>
+            <input id="cgpa" name="currentCgpa" type="number" min="0" max="10" step="0.01" placeholder="8.8" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Achievements -->
+      <section class="card" aria-labelledby="h-ach">
+        <h2 id="h-ach">2. Your achievements</h2>
+        <p class="sub">Add 1 to 6 things you are proud of. Include only what you can explain. Juniors will ask you about them.</p>
+        <div id="ach-list"></div>
+        <div id="ach-error" class="err" role="alert"></div>
+        <button type="button" id="add-ach" class="btn ghost">+ Add achievement</button>
+      </section>
+
+      <!-- 3. Playbook -->
+      <section class="card" aria-labelledby="h-play">
+        <h2 id="h-play">3. Your playbook</h2>
+        <p class="sub">How did you actually do it? Think semester by semester.</p>
+        <div class="field">
+          <label for="content">Roadmap &amp; lessons (Markdown) <span class="req" aria-hidden="true">*</span></label>
+          <textarea id="content" name="markdownContent" aria-required="true" maxlength="20000" style="min-height:220px"
+            placeholder="## Sem 1–2&#10;- Focused on C and maths fundamentals&#10;&#10;## Sem 3&#10;- Solved 20 array problems a week&#10;&#10;## What I would do differently&#10;- Start projects earlier"></textarea>
+          <div class="hint">Markdown supported. <span id="count">0</span> / 20000</div>
+        </div>
+        <div class="actions">
+          <button type="submit" id="publish" class="btn">Publish guide</button>
+          <span class="hint">It appears in the Junior Feed right away.</span>
+        </div>
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <!-- Live preview -->
+    <aside class="preview" aria-label="Feed preview">
+      <div class="card">
+        <h2>Feed preview</h2>
+        <p class="sub">How juniors will see your post.</p>
+        <span id="pv-cat" class="tag acad">Academics</span>
+        <h3 id="pv-title" class="placeholder">Your guide title</h3>
+        <p id="pv-by" class="by">Posted by you</p>
+        <ul id="pv-ach"></ul>
+        <p id="pv-excerpt" class="excerpt placeholder">Your playbook summary will appear here.</p>
+      </div>
+    </aside>
+  </form>
+</main>
+
+<script>
+  const API = "/api/v1/playbooks/create";
+  const MAX_ACH = 6;
+  // type -> label, badge colour, example placeholder
+  const TYPES = {
+    placement:  { label: "Placement / internship",           cls: "intern", ph: "e.g., SDE Intern at Zoho, 6 months" },
+    academic:   { label: "Academic (CGPA, rank, scholarship)", cls: "acad",   ph: "e.g., Department rank 3, merit scholarship" },
+    coding:     { label: "Competitive coding",                 cls: "high",   ph: "e.g., LeetCode 1900+, Codeforces Specialist" },
+    project:    { label: "Project / hackathon",                cls: "acad",   ph: "e.g., Won Smart India Hackathon (college round)" },
+    cert:       { label: "Certification / course",             cls: "intern", ph: "e.g., AWS Cloud Practitioner" },
+    higher:     { label: "Higher-studies exam (GATE/GRE/CAT)", cls: "high",   ph: "e.g., GATE CSE rank 412" },
+    research:   { label: "Research / publication",             cls: "acad",   ph: "e.g., Paper accepted at a student conference" },
+    leadership: { label: "Club / leadership / open source",    cls: "intern", ph: "e.g., Technical lead of the coding club" }
+  };
+  const CATS = { academics: ["Academics", "acad"], internships: ["Internships", "intern"], "higher-studies": ["Higher Studies", "high"] };
+  const $ = (id) => document.getElementById(id);
+  const list = $("ach-list");
+  let seq = 0;
+
+  function el(tag, props = {}, text) {
+    const n = document.createElement(tag);
+    Object.assign(n, props);
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function addAchievement() {
+    if (list.children.length >= MAX_ACH) return;
+    const id = ++seq;
+    const box = el("div", { className: "ach" });
+    box.dataset.id = id;
+    const opts = Object.entries(TYPES).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join("");
+    box.innerHTML = `
+      <div class="ach-head"><strong class="ach-num"></strong>
+        <button type="button" class="btn ghost small" data-remove>Remove</button></div>
+      <div class="row c2">
+        <div class="field"><label for="t${id}">Type <span class="req" aria-hidden="true">*</span></label><select id="t${id}" data-k="type">${opts}</select></div>
+        <div class="field"><label for="w${id}">When <span class="req" aria-hidden="true">*</span></label>
+          <select id="w${id}" data-k="when"><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Year 4</option></select></div>
+      </div>
+      <div class="field"><label for="n${id}">Achievement <span class="req" aria-hidden="true">*</span></label><input id="n${id}" data-k="title" maxlength="120" aria-required="true" /></div>
+      <div class="field"><label for="d${id}">What did you do? <span class="opt">(optional)</span></label>
+        <textarea id="d${id}" data-k="details" maxlength="300" style="min-height:70px" placeholder="Two lines: what it was and how you prepared."></textarea></div>
+      <div class="field"><label for="p${id}">Proof link <span class="opt">(optional: certificate, GitHub, profile)</span></label>
+        <input id="p${id}" data-k="proofUrl" type="url" placeholder="https://" /></div>`;
+    list.appendChild(box);
+    syncTypeHints(box);
+    renumber();
+    box.querySelector("[data-k=title]").focus();
+  }
+
+  function syncTypeHints(box) {
+    const t = TYPES[box.querySelector("[data-k=type]").value];
+    box.querySelector("[data-k=title]").placeholder = t.ph;
+  }
+
+  function renumber() {
+    [...list.children].forEach((b, i) => (b.querySelector(".ach-num").textContent = "Achievement " + (i + 1)));
+    $("add-ach").disabled = list.children.length >= MAX_ACH;
+  }
+
+  function collect() {
+    return [...list.children].map((b) => {
+      const g = (k) => b.querySelector(`[data-k=${k}]`).value.trim();
+      return { type: g("type"), title: g("title"), when: g("when"), details: g("details"), proofUrl: g("proofUrl") };
+    });
+  }
+
+  // The form has no title field; build one so the feed card and API still get a title.
+  function genTitle() {
+    const co = $("company").value.trim();
+    return ("My " + CATS[$("category").value][0] + " journey" + (co ? " · " + co : "")).slice(0, 150);
+  }
+
+  function renderPreview() {
+    const [catName, catCls] = CATS[$("category").value];
+    const pc = $("pv-cat"); pc.textContent = catName; pc.className = "tag " + catCls;
+
+    $("pv-title").textContent = genTitle();
+
+    const yr = $("year").value, co = $("company").value.trim(), cg = $("cgpa").value;
+    const ord = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" }[yr];
+    const yl = yr === "5" ? "Alumni" : ord ? ord + " Year" : null;
+    const parts = [yl, co || null].filter(Boolean).join(" · ");
+    $("pv-by").textContent = "Posted by you" + (parts ? " · " + parts : "") + (cg ? ` (CGPA ${cg})` : "");
+
+    const ul = $("pv-ach"); ul.replaceChildren();
+    collect().filter((a) => a.title).forEach((a) => {
+      const t = TYPES[a.type];
+      const li = el("li");
+      li.append(el("span", { className: "tag " + t.cls }, t.label), el("div", {}, a.title), el("small", {}, a.when));
+      ul.appendChild(li);
+    });
+
+    const plain = $("content").value.replace(/[#*`>_\[\]]/g, "").replace(/\s+/g, " ").trim();
+    const ex = $("pv-excerpt");
+    ex.textContent = plain ? (plain.length > 160 ? plain.slice(0, 160).trim() + "…" : plain) : "Your playbook summary will appear here.";
+    ex.className = "excerpt" + (plain ? "" : " placeholder");
+    $("count").textContent = $("content").value.length;
+  }
+
+  function clearErrors() {
+    document.querySelectorAll(".err.f").forEach((n) => n.remove());
+    document.querySelectorAll(".invalid").forEach((n) => n.classList.remove("invalid"));
+    $("ach-error").textContent = "";
+  }
+  function flag(input, msg) {
+    input.classList.add("invalid");
+    input.parentElement.appendChild(el("div", { className: "err f" }, msg));
+  }
+
+  function validate() {
+    clearErrors();
+    let ok = true;
+    [["company", "Add your company or university."], ["year", "Select your year."], ["content", "Write your playbook."]]
+      .forEach(([id, m]) => { if (!$(id).value.trim()) { flag($(id), m); ok = false; } });
+    const achs = collect();
+    if (!achs.some((a) => a.title)) { $("ach-error").textContent = "Add at least one achievement with a title."; ok = false; }
+    [...list.children].forEach((b) => {
+      const t = b.querySelector("[data-k=title]"), p = b.querySelector("[data-k=proofUrl]");
+      if (!t.value.trim() && (b.querySelector("[data-k=details]").value.trim() || p.value.trim())) { flag(t, "Give this achievement a title."); ok = false; }
+      if (p.value && !p.checkValidity()) { flag(p, "Enter a full link starting with https://"); ok = false; }
+    });
+    return ok;
+  }
+
+  function say(kind, msg) { const s = $("status"); s.className = "status " + kind; s.textContent = msg; }
+
+  async function publish(e) {
+    e.preventDefault();
+    say("", "");
+    if (!validate()) { say("bad", "Fix the highlighted fields and publish again."); return; }
+    let token = null; try { token = localStorage.getItem("jwt"); } catch (_) {}
+    if (!token) { say("bad", "You are signed out. Log in as a senior to publish."); return; }
+
+    const cg = $("cgpa").value;
+    const body = {
+      category: $("category").value,
+      title: genTitle(),
+      company: $("company").value.trim(),
+      yearOfStudy: Number($("year").value),
+      currentCgpa: cg === "" ? null : Number(cg),
+      achievements: collect().filter((a) => a.title).map((a) => ({ ...a, proofUrl: a.proofUrl || null })),
+      markdownContent: $("content").value.trim()
+    };
+
+    const btn = $("publish"); btn.disabled = true; btn.textContent = "Publishing…";
+    try {
+      const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify(body) });
+      if (res.status === 201) {
+        say("ok", "Published. Your guide is now live in the Junior Feed.");
+        $("form").reset(); list.replaceChildren(); addAchievement(); renderPreview();
+      } else if (res.status === 400) {
+        const d = await res.json().catch(() => ({}));
+        say("bad", "The server rejected some fields: " + Object.keys(d.errors || {}).join(", "));
+      } else if (res.status === 401) say("bad", "Your session expired. Log in again.");
+      else if (res.status === 403) say("bad", "Only senior accounts can publish guides.");
+      else say("bad", "Could not publish (error " + res.status + "). Try again.");
+    } catch (_) {
+      say("bad", "Could not reach the server. Check your connection and try again.");
+    } finally { btn.disabled = false; btn.textContent = "Publish guide"; }
+  }
+
+  $("add-ach").addEventListener("click", addAchievement);
+  list.addEventListener("click", (e) => {
+    if (e.target.matches("[data-remove]")) { e.target.closest(".ach").remove(); renumber(); renderPreview(); }
+  });
+  list.addEventListener("change", (e) => { if (e.target.matches("[data-k=type]")) syncTypeHints(e.target.closest(".ach")); });
+  $("form").addEventListener("input", renderPreview);
+  $("form").addEventListener("change", renderPreview);
+  $("form").addEventListener("submit", publish);
+
+  addAchievement();
+  renderPreview();
+</script>
+</body>
+</html>
