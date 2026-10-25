@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8fafc">
+  <title>Q&amp;A Forum | EduPath</title>
+  <link rel="stylesheet" href="/css/forum.css">
+  <style>
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.75rem 1.5rem;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .switch {
+      display: flex;
+      gap: 0.25rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.2rem;
+    }
+    .switch a {
+      padding: 0.35rem 0.9rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+    .switch a:hover {
+      color: var(--text);
+    }
+    .switch a.active {
+      background: var(--primary);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:1.5rem;">
+      <a class="brand" href="/" aria-label="EduPath Platform">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5"/></svg>
+        <span>EduPath</span>
+      </a>
+      <nav class="switch" aria-label="Portal Navigation">
+        <a href="/">Home</a>
+        <a href="/junior.html">Junior Portal</a>
+        <a href="/senior.html">Senior Portal</a>
+        <a href="/forum.html" class="active" aria-current="page">Q&amp;A Forum</a>
+      </nav>
+    </div>
+    <div style="display:flex;gap:0.75rem;align-items:center;">
+      <span class="header-label" style="font-size:0.85rem;color:var(--muted);font-weight:500;">Role-Aware Forum</span>
+      <button class="button button-secondary button-small" id="refresh-button" type="button">Refresh</button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <section class="preview-card" id="preview-panel" hidden aria-labelledby="preview-heading">
+      <div>
+        <span class="eyebrow">LOCAL PREVIEW</span>
+        <h1 id="preview-heading">Choose a forum view</h1>
+        <p>Preview the Junior question form or the Senior answer queue. Live database questions are linked across Junior and Senior views.</p>
+      </div>
+      <div class="preview-actions">
+        <button class="button button-primary" type="button" data-preview-role="JUNIOR">Preview as Junior</button>
+        <button class="button button-secondary" type="button" data-preview-role="SENIOR">Preview as Senior</button>
+      </div>
+      <p class="notice notice-error" id="preview-error" role="alert" hidden></p>
+    </section>
+
+    <section id="forum-workspace" hidden>
+      <div class="page-heading">
+        <div>
+          <span class="eyebrow" id="role-label">EDUPATH COMMUNITY</span>
+          <h1 id="page-title">Q&amp;A Forum</h1>
+          <p class="page-description" id="page-description"></p>
+        </div>
+        <span class="role-badge" id="role-badge"></span>
+      </div>
+
+      <div id="page-error" class="notice notice-error" role="alert" hidden></div>
+      <div id="page-success" class="notice notice-success" role="status" hidden></div>
+
+      <section id="junior-workspace" hidden>
+        <div class="junior-layout">
+          <section class="card ask-card" aria-labelledby="ask-title">
+            <h2 class="section-heading" id="ask-title">Ask a question</h2>
+            <p class="section-description">Your question will be shared with all Seniors and Alumni mentors.</p>
+            <form id="question-form" class="forum-form">
+              <label class="field-label" for="question-title">Question title</label>
+              <input class="text-input" id="question-title" name="title" type="text" maxlength="200"
+                     placeholder="What would you like help with?" required>
+
+              <label class="field-label" for="question-category">Topic</label>
+              <select class="text-input" id="question-category" name="category" required>
+                <option value="" disabled selected>Select a topic</option>
+                <option value="ACADEMICS">Academics</option>
+                <option value="INTERNSHIPS">Internships</option>
+                <option value="HIGHER_STUDIES">Higher Studies</option>
+                <option value="PLACEMENT">Placement</option>
+              </select>
+
+              <label class="field-label" for="question-body">Your question</label>
+              <textarea class="text-input textarea-input" id="question-body" name="questionBody" rows="5"
+                        maxlength="10000" placeholder="Add any details that will help a Senior answer..." required></textarea>
+              <div class="field-meta"><span>Up to 10,000 characters</span><span id="body-count">0 / 10000</span></div>
+
+              <button class="button button-primary submit-button" type="submit">
+                <span class="button-label">Post question</span><span aria-hidden="true">→</span>
+              </button>
+            </form>
+          </section>
+
+          <section class="questions-column" aria-labelledby="junior-list-title">
+            <h2 class="section-heading" id="junior-list-title">My questions</h2>
+            <p class="section-description">Answers are verified by seniors and update automatically.</p>
+            <div id="junior-question-list" class="question-list" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="senior-workspace" hidden>
+        <section class="questions-column senior-column" aria-labelledby="senior-list-title">
+          <h2 class="section-heading" id="senior-list-title">Questions from Juniors</h2>
+          <p class="section-description">Help a Junior out. Verified answers complete each question.</p>
+          <div id="senior-question-list" class="question-list" aria-live="polite"></div>
+        </section>
+      </section>
+
+      <div class="preview-footer" id="preview-footer" hidden>
+        <span>Local preview active</span>
+        <button class="text-button" id="switch-preview-role" type="button">Switch Junior / Senior view</button>
+      </div>
+    </section>
+
+    <section class="connection-message" id="connection-message" hidden>
+      <span class="eyebrow">EDUPATH Q&amp;A</span>
+      <h1>Open the forum from your EduPath portal</h1>
+      <p id="connection-description">Sign in through your Junior or Senior portal first. This forum uses your existing EduPath session.</p>
+      <div style="margin-top:1.5rem;display:flex;gap:1rem;">
+        <a href="/junior.html" class="button button-primary">Go to Junior Portal</a>
+        <a href="/senior.html" class="button button-secondary">Go to Senior Portal</a>
+      </div>
+    </section>
+  </main>
+  <script src="/js/forum.js" defer></script>
+</body>
+</html>

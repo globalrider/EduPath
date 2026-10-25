@@ -63,14 +63,31 @@ public class SecurityConfig {
                 .accessDeniedHandler(customAccessDeniedHandler)
             )
             .authorizeHttpRequests(auth -> auth
+                // Public web pages, assets, and documentation
+                .requestMatchers(
+                    "/", "/index.html", "/login.html", "/signup.html", "/junior.html", "/senior.html", "/forum.html",
+                    "/junior/**", "/senior/**", "/forum/**",
+                    "/css/**", "/js/**", "/assets/**", "/favicon.ico", "/error"
+                ).permitAll()
+
                 // Public authentication and documentation/health endpoints
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/health", "/h2-console/**").permitAll()
-                
+
+                // QA Forum compatibility endpoints
+                .requestMatchers(
+                    "/api/csrf", "/api/dev/preview-role", "/api/dev/preview-role/**",
+                    "/api/me", "/api/junior/**", "/api/senior/**"
+                ).permitAll()
+
                 // Read-only public feed and discussions
                 .requestMatchers(HttpMethod.GET, "/api/v1/playbooks/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/questions/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/alumni/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/roadmaps/**").permitAll()
+
+                // Allow creating playbooks and questions seamlessly (handles both JWT and local preview)
+                .requestMatchers(HttpMethod.POST, "/api/v1/playbooks", "/api/v1/playbooks/create").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/questions", "/api/v1/questions/*/answers").permitAll()
 
                 // Playbook publishing permissions: SENIOR, ALUMNI, ADMIN
                 .requestMatchers(HttpMethod.POST, "/api/v1/playbooks/**").hasAnyRole("SENIOR", "ALUMNI", "ADMIN")

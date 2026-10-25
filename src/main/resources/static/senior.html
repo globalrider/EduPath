@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EduPath · Senior Portal</title>
+<style>
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+
+    --tag-acad: #dbeafe;
+    --tag-acad-txt: #1e40af;
+    --tag-intern: #dcfce7;
+    --tag-intern-txt: #166534;
+    --tag-high: #fef3c7;
+    --tag-high-txt: #92400e;
+  }
+  * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-size: 0.95rem; line-height: 1.6; }
+
+  /* Header */
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+  .topbar-inner { max-width: 1140px; margin: 0 auto; padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.15rem; color: var(--primary); text-decoration: none; }
+  
+  /* Tabs */
+  .nav-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1.5rem 0 2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.75rem;
+  }
+  .tab-btn {
+    background: none;
+    border: 1px solid transparent;
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    transition: all 0.15s ease;
+  }
+  .tab-btn:hover {
+    background: #f1f5f9;
+    color: var(--text);
+  }
+  .tab-btn.active {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: var(--primary);
+  }
+  .tab-badge {
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+  }
+
+  /* Layout */
+  main { max-width: 1140px; margin: 0 auto; padding: 1.5rem; }
+  .page-head h1 { margin: 0 0 0.25rem; font-size: 1.6rem; font-weight: 700; }
+  .page-head p { margin: 0 0 1.5rem; color: var(--muted); font-size: 0.95rem; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 1.5rem; align-items: start; }
+  .stack { display: grid; gap: 1.5rem; }
+  .preview { position: sticky; top: 5rem; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .preview { position: static; } }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .card h2 { margin: 0 0 0.25rem; font-size: 1.05rem; font-weight: 700; }
+  .card .sub { margin: 0 0 1.25rem; color: var(--muted); font-size: 0.85rem; }
+
+  /* Form */
+  .field { margin-bottom: 1rem; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; }
+  .opt { font-weight: 400; color: var(--muted); }
+  .req { color: #b91c1c; margin-left: 0.2rem; font-weight: 700; }
+  input, select, textarea { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.75rem; font-size: 0.9rem; color: var(--text); }
+  textarea { resize: vertical; min-height: 90px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; border-color: var(--primary); }
+  .invalid { border-color: #b91c1c; }
+  .err { color: #b91c1c; font-size: 0.78rem; margin-top: 0.25rem; }
+  .hint { color: var(--muted); font-size: 0.78rem; margin-top: 0.3rem; }
+  .row { display: grid; gap: 1rem; }
+  .row.c3 { grid-template-columns: 1fr 2fr 1fr; }
+  .row.c2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 640px) { .row.c3, .row.c2 { grid-template-columns: 1fr; } }
+
+  /* Buttons */
+  .btn { background: var(--primary); color: #fff; border: 0; border-radius: 6px; padding: 0.65rem 1.25rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; transition: background 0.15s ease; }
+  .btn:hover { background: var(--primary-dark); }
+  .btn:focus-visible { outline: 2px solid var(--primary-dark); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn.ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn.ghost:hover { background: var(--bg); }
+  .btn.small { padding: 0.4rem 0.75rem; font-size: 0.8rem; }
+
+  /* Achievements */
+  .ach { border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; background: var(--bg); }
+  .ach-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .ach-head strong { font-size: 0.85rem; }
+  .ach .field:last-child { margin-bottom: 0; }
+
+  /* Tags */
+  .tag { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; }
+  .tag.acad { background: var(--tag-acad); color: var(--tag-acad-txt); }
+  .tag.intern { background: var(--tag-intern); color: var(--tag-intern-txt); }
+  .tag.high { background: var(--tag-high); color: var(--tag-high-txt); }
+
+  /* Preview */
+  .preview h3 { margin: 0.6rem 0 0.2rem; font-size: 1rem; }
+  .preview .by { color: var(--muted); font-size: 0.82rem; margin: 0 0 0.75rem; }
+  .preview ul { list-style: none; margin: 0 0 0.75rem; padding: 0; display: grid; gap: 0.5rem; }
+  .preview li { border: 1px solid var(--border); border-radius: 6px; padding: 0.5rem 0.65rem; font-size: 0.85rem; }
+  .preview li small { display: block; color: var(--muted); }
+  .preview .excerpt { color: var(--muted); font-size: 0.85rem; margin: 0; }
+  .placeholder { color: var(--muted); font-style: italic; }
+
+  .actions { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+  .status { display: none; margin-top: 1rem; padding: 0.65rem 0.8rem; border-radius: 6px; font-size: 0.85rem; }
+  .status.ok { display: block; background: var(--tag-intern); color: var(--tag-intern-txt); }
+  .status.bad { display: block; background: #fee2e2; color: #991b1b; }
+
+  .user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.84rem;
+    font-weight: 600;
+  }
+
+  /* ─── Senior Q&A Queue Specific ─── */
+  .qa-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    transition: transform 0.2s ease, opacity 0.3s ease;
+  }
+  .qa-card.fade-out {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  .qa-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .qa-author-info {
+    font-size: 0.85rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .qa-author-badge {
+    background: #f1f5f9;
+    border: 1px solid var(--border);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .qa-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 0.5rem;
+  }
+  .qa-desc {
+    color: #334155;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin: 0 0 1.25rem;
+    background: var(--bg);
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
+    border-left: 3px solid var(--primary);
+  }
+  .qa-reply-box {
+    margin-top: 1rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+  .empty-queue-box {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+  }
+  .empty-queue-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Toast Notification */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: #0f172a;
+    color: #fff;
+    padding: 0.85rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div style="display:flex;align-items:center;gap:1.5rem;">
+      <a href="/" class="brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+          <path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5"/>
+        </svg>
+        <span>EduPath</span>
+      </a>
+      <span style="font-size:0.88rem;color:var(--muted);font-weight:600;">Senior &amp; Alumni Portal</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <span class="user-badge" id="senior-badge">
+        <span>👨‍💻</span> <span id="senior-name-text">Senior Mentor</span>
+      </span>
+      <button type="button" class="btn ghost small" onclick="signOut()" style="gap:0.35rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Sign Out
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs" aria-label="Senior Portal Sections">
+    <button type="button" class="tab-btn active" id="tab-qa" onclick="showTab('qa')">
+      <span>💬</span>
+      <span>Junior Q&amp;A Answering Queue</span>
+      <span class="tab-badge" id="qa-count-badge">0</span>
+    </button>
+    <button type="button" class="tab-btn" id="tab-playbook" onclick="showTab('playbook')">
+      <span>✍️</span>
+      <span>Share Your Journey (Playbooks)</span>
+    </button>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 1: JUNIOR Q&A QUEUE
+       ═══════════════════════════════════════════════ -->
+  <section id="section-qa">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+      <div class="page-head" style="margin-bottom:0;">
+        <h1>Junior Questions Awaiting Guidance</h1>
+        <p style="margin-bottom:0;">Review open questions posted by junior students. Your verified reply will appear directly in the junior's portal, and the question will be removed from all seniors' queues.</p>
+      </div>
+      <button type="button" class="btn ghost small" onclick="loadSeniorQuestions()" id="btn-refresh-queue">
+        ↻ Refresh Queue
+      </button>
+    </div>
+
+    <!-- Questions Feed -->
+    <div id="senior-qa-list">
+      <div style="text-align:center;padding:3rem 1rem;color:var(--muted)">
+        Checking for pending questions from juniors…
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════
+       SECTION 2: PLAYBOOK WRITER
+       ═══════════════════════════════════════════════ -->
+  <section id="section-playbook" style="display:none;">
+    <div class="page-head">
+      <h1>Share Your Journey</h1>
+      <p>Show juniors what you achieved and how you got there. Real results make your advice believable. Fields marked <span class="req" aria-hidden="true">*</span> are required.</p>
+    </div>
+
+    <form id="form" class="layout" novalidate>
+      <div class="stack">
+
+        <!-- 1. Basics -->
+        <section class="card" aria-labelledby="h-basics">
+          <h2 id="h-basics">1. About this guide</h2>
+          <p class="sub">Your name comes from your account, so you only need to add these details.</p>
+
+          <div class="field">
+            <label for="category">Target section <span class="req" aria-hidden="true">*</span></label>
+            <select id="category" name="category" aria-required="true">
+              <option value="Academics">Academics (sem routine, CGPA strategy, core subjects)</option>
+              <option value="Internships">Internships (interview rounds, resume, DSA)</option>
+              <option value="Higher Studies">Higher Studies (GATE, GRE, CAT, research)</option>
+              <option value="Placement">Placement (campus drives, system design, offers)</option>
+            </select>
+          </div>
+          <div class="row c3">
+            <div class="field">
+              <label for="year">Year of study <span class="req" aria-hidden="true">*</span></label>
+              <select id="year" name="yearOfStudy" aria-required="true">
+                <option value="">Select</option>
+                <option value="1">1st Year</option><option value="2">2nd Year</option>
+                <option value="3">3rd Year</option><option value="4" selected>4th / Final Year</option><option value="5">Alumni</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="company">Company / placement / university <span class="req" aria-hidden="true">*</span></label>
+              <input id="company" name="company" aria-required="true" maxlength="100" placeholder="e.g., Placed at Zoho / SDE Intern" value="Placed at Zoho" />
+            </div>
+            <div class="field">
+              <label for="cgpa">Current CGPA <span class="opt">(optional)</span></label>
+              <input id="cgpa" name="currentCgpa" type="number" min="0" max="10" step="0.01" placeholder="8.8" value="8.9" />
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Achievements -->
+        <section class="card" aria-labelledby="h-ach">
+          <h2 id="h-ach">2. Your achievements</h2>
+          <p class="sub">Add 1 to 6 things you are proud of. Include only what you can explain. Juniors will ask you about them.</p>
+          <div id="ach-list"></div>
+          <div id="ach-error" class="err" role="alert"></div>
+          <button type="button" id="add-ach" class="btn ghost">+ Add achievement</button>
+        </section>
+
+        <!-- 3. Playbook -->
+        <section class="card" aria-labelledby="h-play">
+          <h2 id="h-play">3. Your playbook</h2>
+          <p class="sub">How did you actually do it? Think semester by semester.</p>
+          <div class="field">
+            <label for="content">Roadmap &amp; lessons (Markdown) <span class="req" aria-hidden="true">*</span></label>
+            <textarea id="content" name="markdownContent" aria-required="true" maxlength="20000" style="min-height:220px"
+              placeholder="## Sem 1–2&#10;- Focused on C and maths fundamentals&#10;&#10;## Sem 3&#10;- Solved 20 array problems a week&#10;&#10;## What I would do differently&#10;- Start projects earlier">## Semester 1–2: Foundation
+- Focused heavily on C and Object Oriented Programming basics.
+- Kept CGPA above 8.5 to ensure eligibility for top recruitment drives.
+
+## Semester 3–4: Core Competence & DSA
+- Started solving Data Structures daily (LeetCode and Striver's A2Z sheet).
+- Built 2 full-stack Java Spring Boot projects with MySQL.
+
+## Semester 5–6: Internships & Problem Solving
+- Cleared campus technical screening rounds with strong algorithmic speed.
+- Practiced mock technical interviews and system design fundamentals.
+
+## Advice to Juniors
+- Don't skip pointers and memory fundamentals.
+- Consistency over cramming: 2 problems a day beats 50 on weekends.</textarea>
+            <div class="hint">Markdown supported. <span id="count">0</span> / 20000</div>
+          </div>
+          <div class="actions">
+            <button type="submit" id="publish" class="btn">Publish guide</button>
+            <span class="hint">It appears in the Junior Feed immediately upon submission.</span>
+          </div>
+          <div id="status" class="status" role="status" aria-live="polite"></div>
+        </section>
+      </div>
+
+      <!-- Live preview -->
+      <aside class="preview" aria-label="Feed preview">
+        <div class="card">
+          <h2>Feed preview</h2>
+          <p class="sub">How juniors will see your post in their portal.</p>
+          <span id="pv-cat" class="tag acad">Academics</span>
+          <h3 id="pv-title" class="placeholder">Your guide title</h3>
+          <p id="pv-by" class="by">Posted by you</p>
+          <ul id="pv-ach"></ul>
+          <p id="pv-excerpt" class="excerpt placeholder">Your playbook summary will appear here.</p>
+        </div>
+      </aside>
+    </form>
+  </section>
+</main>
+
+<div id="toast" class="toast" style="display:none;" role="status"></div>
+
+<script>
+  // ─── AUTHENTICATION AND ROLE VERIFICATION ───
+  let currentUser = null;
+  const token = localStorage.getItem("jwt");
+  const userStr = localStorage.getItem("user");
+
+  if (!token || !userStr) {
+    window.location.href = "/login.html";
+  } else {
+    try {
+      currentUser = JSON.parse(userStr);
+      const role = (currentUser.role || "").toUpperCase();
+      if (role === "JUNIOR") {
+        // Role mismatch: Juniors cannot view senior portal
+        window.location.href = "/junior.html";
+      } else {
+        document.getElementById("senior-name-text").textContent = `${currentUser.name} (${role})`;
+      }
+    } catch (_) {
+      window.location.href = "/login.html";
+    }
+  }
+
+  function signOut() {
+    localStorage.removeItem("jwt");
+    localStorage.removeItem("user");
+    window.location.href = "/login.html";
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    setTimeout(() => { t.style.display = "none"; }, 3500);
+  }
+
+  function escapeHtml(text) {
+    if (!text) return "";
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // ─── TAB NAVIGATION ───
+  function showTab(tab) {
+    const qaTab = document.getElementById("tab-qa");
+    const playbookTab = document.getElementById("tab-playbook");
+    const sectionQa = document.getElementById("section-qa");
+    const sectionPlaybook = document.getElementById("section-playbook");
+
+    if (tab === "qa") {
+      qaTab.classList.add("active");
+      playbookTab.classList.remove("active");
+      sectionQa.style.display = "block";
+      sectionPlaybook.style.display = "none";
+      loadSeniorQuestions();
+    } else {
+      playbookTab.classList.add("active");
+      qaTab.classList.remove("active");
+      sectionPlaybook.style.display = "block";
+      sectionQa.style.display = "none";
+    }
+  }
+
+  // ─── SENIOR Q&A QUEUE LOGIC ───
+  async function loadSeniorQuestions() {
+    const list = document.getElementById("senior-qa-list");
+    const badge = document.getElementById("qa-count-badge");
+    const refreshBtn = document.getElementById("btn-refresh-queue");
+
+    if (refreshBtn) refreshBtn.textContent = "Loading…";
+
+    try {
+      const res = await fetch("/api/senior/questions");
+      if (res.ok) {
+        const questions = await res.json();
+        const pending = Array.isArray(questions) ? questions : [];
+
+        badge.textContent = pending.length;
+
+        if (pending.length === 0) {
+          list.innerHTML = `
+            <div class="empty-queue-box">
+              <div class="empty-queue-icon">🎉</div>
+              <h3 style="margin-bottom:0.4rem;">All Caught Up!</h3>
+              <p style="color:var(--muted);max-width:500px;margin:0 auto 1.25rem;">
+                There are currently no unanswered questions from junior students.
+                Whenever a junior posts a new question, it will appear here immediately.
+              </p>
+              <button class="btn ghost small" onclick="loadSeniorQuestions()">Check Again</button>
+            </div>
+          `;
+          return;
+        }
+
+        list.innerHTML = pending.map(q => `
+          <article class="qa-card" id="q-card-${q.id}">
+            <div class="qa-card-head">
+              <span class="tag ${tagClassForCat(q.category)}">${escapeHtml(q.category || "General")}</span>
+              <div class="qa-author-info">
+                <span>Asked by <strong style="color:var(--text)">${escapeHtml(q.authorName || "Junior Student")}</strong></span>
+                <span class="qa-author-badge">Student</span>
+              </div>
+            </div>
+
+            <h3 class="qa-title">${escapeHtml(q.title)}</h3>
+            <div class="qa-desc">${escapeHtml(q.questionBody)}</div>
+
+            <div class="qa-reply-box">
+              <label for="ans-input-${q.id}" style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:0.4rem;">
+                Your Verified Advice / Reply:
+              </label>
+              <textarea id="ans-input-${q.id}" rows="3" placeholder="Provide clear guidance, semester advice, or preparation strategy for this student..." style="width:100%;margin-bottom:0.75rem;"></textarea>
+              <div style="display:flex;justify-content:flex-end;">
+                <button type="button" class="btn" onclick="submitSeniorAnswer(${q.id}, this)">
+                  Send Verified Answer ➔
+                </button>
+              </div>
+            </div>
+          </article>
+        `).join("");
+      } else {
+        list.innerHTML = `<p style="color:#b91c1c;padding:1.5rem;">Failed to load questions from server (status ${res.status}).</p>`;
+      }
+    } catch (err) {
+      list.innerHTML = `<p style="color:#b91c1c;padding:1.5rem;">Could not connect to EduPath server.</p>`;
+    } finally {
+      if (refreshBtn) refreshBtn.textContent = "↻ Refresh Queue";
+    }
+  }
+
+  function tagClassForCat(cat) {
+    if (cat === "Academics") return "acad";
+    if (cat === "Internships" || cat === "Placement") return "intern";
+    return "high";
+  }
+
+  async function submitSeniorAnswer(questionId, buttonEl) {
+    const textarea = document.getElementById(`ans-input-${questionId}`);
+    const answerBody = textarea ? textarea.value.trim() : "";
+
+    if (!answerBody) {
+      alert("Please enter your answer/advice before submitting.");
+      if (textarea) textarea.focus();
+      return;
+    }
+
+    buttonEl.disabled = true;
+    buttonEl.textContent = "Submitting…";
+
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = "Bearer " + token;
+
+      const res = await fetch(`/api/senior/questions/${questionId}/answers`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ answerBody })
+      });
+
+      if (res.ok || res.status === 204 || res.status === 201) {
+        showToast("✓ Answer submitted! Question answered and removed from all seniors' queue.");
+
+        // Animate card removal immediately from Senior Q&A queue
+        const card = document.getElementById(`q-card-${questionId}`);
+        if (card) {
+          card.classList.add("fade-out");
+          setTimeout(() => {
+            card.remove();
+            // Update badge count
+            const badge = document.getElementById("qa-count-badge");
+            const currentCount = parseInt(badge.textContent || "1", 10);
+            const newCount = Math.max(0, currentCount - 1);
+            badge.textContent = newCount;
+
+            // If empty, re-render empty state
+            const list = document.getElementById("senior-qa-list");
+            if (!list.querySelector(".qa-card")) {
+              loadSeniorQuestions();
+            }
+          }, 300);
+        }
+      } else {
+        alert("Failed to submit answer. Please try again.");
+        buttonEl.disabled = false;
+        buttonEl.textContent = "Send Verified Answer ➔";
+      }
+    } catch (e) {
+      alert("Network error while submitting answer.");
+      buttonEl.disabled = false;
+      buttonEl.textContent = "Send Verified Answer ➔";
+    }
+  }
+
+  // ─── PLAYBOOK FORM LOGIC ───
+  const API = "/api/v1/playbooks";
+  const MAX_ACH = 6;
+  const TYPES = {
+    placement:  { label: "Placement / internship",             cls: "intern", ph: "e.g., SDE Intern at Zoho, 6 months" },
+    academic:   { label: "Academic (CGPA, rank, scholarship)", cls: "acad",   ph: "e.g., Department rank 3, merit scholarship" },
+    coding:     { label: "Competitive coding",                 cls: "high",   ph: "e.g., LeetCode 1900+, Codeforces Specialist" },
+    project:    { label: "Project / hackathon",                cls: "acad",   ph: "e.g., Won Smart India Hackathon (college round)" },
+    cert:       { label: "Certification / course",             cls: "intern", ph: "e.g., AWS Cloud Practitioner" },
+    higher:     { label: "Higher-studies exam (GATE/GRE/CAT)", cls: "high",   ph: "e.g., GATE CSE rank 412" },
+    research:   { label: "Research / publication",             cls: "acad",   ph: "e.g., Paper accepted at a student conference" },
+    leadership: { label: "Club / leadership / open source",    cls: "intern", ph: "e.g., Technical lead of the coding club" }
+  };
+  const CATS = {
+    Academics: ["Academics", "acad"],
+    Internships: ["Internships", "intern"],
+    "Higher Studies": ["Higher Studies", "high"],
+    Placement: ["Placement", "intern"]
+  };
+  const $ = (id) => document.getElementById(id);
+  const list = $("ach-list");
+  let seq = 0;
+
+  function el(tag, props = {}, text) {
+    const n = document.createElement(tag);
+    Object.assign(n, props);
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function addAchievement(presetTitle, presetType, presetWhen) {
+    if (list.children.length >= MAX_ACH) return;
+    const id = ++seq;
+    const box = el("div", { className: "ach" });
+    box.dataset.id = id;
+    const opts = Object.entries(TYPES).map(([k, t]) => `<option value="${k}" ${k === presetType ? 'selected' : ''}>${t.label}</option>`).join("");
+    box.innerHTML = `
+      <div class="ach-head"><strong class="ach-num">Achievement #${id}</strong>
+        <button type="button" class="btn ghost small" data-remove>Remove</button></div>
+      <div class="row c2">
+        <div class="field"><label for="t${id}">Type <span class="req" aria-hidden="true">*</span></label><select id="t${id}" data-k="type">${opts}</select></div>
+        <div class="field"><label for="w${id}">When <span class="req" aria-hidden="true">*</span></label>
+          <select id="w${id}" data-k="when">
+            <option ${presetWhen === 'Year 1' ? 'selected':''}>Year 1</option>
+            <option ${presetWhen === 'Year 2' ? 'selected':''}>Year 2</option>
+            <option ${presetWhen === 'Year 3' ? 'selected':''}>Year 3</option>
+            <option ${presetWhen === 'Year 4' || !presetWhen ? 'selected':''}>Year 4</option>
+          </select></div>
+      </div>
+      <div class="field"><label for="n${id}">Achievement <span class="req" aria-hidden="true">*</span></label>
+        <input id="n${id}" data-k="title" maxlength="120" aria-required="true" value="${presetTitle || ''}" /></div>
+      <div class="field"><label for="d${id}">What did you do? <span class="opt">(optional)</span></label>
+        <textarea id="d${id}" data-k="details" maxlength="300" style="min-height:70px" placeholder="Two lines: what it was and how you prepared."></textarea></div>
+      <div class="field"><label for="p${id}">Proof link <span class="opt">(optional: certificate, GitHub, profile)</span></label>
+        <input id="p${id}" data-k="proofUrl" type="url" placeholder="https://" /></div>`;
+    list.appendChild(box);
+    syncTypeHints(box);
+    renumber();
+  }
+
+  function syncTypeHints(box) {
+    const t = TYPES[box.querySelector("[data-k=type]").value];
+    if (t) box.querySelector("[data-k=title]").placeholder = t.ph;
+  }
+
+  function renumber() {
+    list.querySelectorAll(".ach").forEach((b, i) => {
+      b.querySelector(".ach-num").textContent = `Achievement #${i + 1}`;
+    });
+    $("add-ach").disabled = list.children.length >= MAX_ACH;
+  }
+
+  function collect() {
+    return [...list.children].map((b) => ({
+      type: b.querySelector("[data-k=type]").value,
+      when: b.querySelector("[data-k=when]").value,
+      title: b.querySelector("[data-k=title]").value.trim(),
+      details: b.querySelector("[data-k=details]").value.trim(),
+      proofUrl: b.querySelector("[data-k=proofUrl]").value.trim()
+    }));
+  }
+
+  function genTitle() {
+    const co = $("company").value.trim();
+    const cat = $("category").value;
+    if (co) return `My ${cat} Journey & Strategy — ${co}`;
+    return `My Year-Wise Guide to Cracking ${cat}`;
+  }
+
+  function renderPreview() {
+    const catVal = $("category").value;
+    const catInfo = CATS[catVal] || ["Academics", "acad"];
+    const pc = $("pv-cat"); pc.textContent = catInfo[0]; pc.className = "tag " + catInfo[1];
+
+    $("pv-title").textContent = genTitle();
+
+    const yr = $("year").value, co = $("company").value.trim(), cg = $("cgpa").value;
+    const ord = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" }[yr];
+    const yl = yr === "5" ? "Alumni" : ord ? ord + " Year" : null;
+    const parts = [yl, co || null].filter(Boolean).join(" · ");
+    const authorName = currentUser ? currentUser.name : "Senior Mentor";
+    $("pv-by").textContent = "Posted by " + authorName + (parts ? " · " + parts : "") + (cg ? ` (CGPA ${cg})` : "");
+
+    const ul = $("pv-ach"); ul.replaceChildren();
+    collect().filter((a) => a.title).forEach((a) => {
+      const t = TYPES[a.type] || { cls: "acad", label: a.type };
+      const li = el("li");
+      li.append(el("span", { className: "tag " + t.cls }, t.label), el("div", { style: "font-weight:600;margin-top:2px" }, a.title), el("small", {}, a.when));
+      ul.appendChild(li);
+    });
+
+    const plain = $("content").value.replace(/[#*`>_\[\]]/g, "").replace(/\s+/g, " ").trim();
+    const ex = $("pv-excerpt");
+    ex.textContent = plain ? (plain.length > 160 ? plain.slice(0, 160).trim() + "…" : plain) : "Your playbook summary will appear here.";
+    ex.className = "excerpt" + (plain ? "" : " placeholder");
+    $("count").textContent = $("content").value.length;
+  }
+
+  function clearErrors() {
+    document.querySelectorAll(".err.f").forEach((n) => n.remove());
+    document.querySelectorAll(".invalid").forEach((n) => n.classList.remove("invalid"));
+    $("ach-error").textContent = "";
+  }
+  function flag(input, msg) {
+    input.classList.add("invalid");
+    input.parentElement.appendChild(el("div", { className: "err f" }, msg));
+  }
+
+  function validate() {
+    clearErrors();
+    let ok = true;
+    [["company", "Add your company or university."], ["year", "Select your year."], ["content", "Write your playbook."]]
+      .forEach(([id, m]) => { if (!$(id).value.trim()) { flag($(id), m); ok = false; } });
+    const achs = collect();
+    if (!achs.some((a) => a.title)) { $("ach-error").textContent = "Add at least one achievement with a title."; ok = false; }
+    [...list.children].forEach((b) => {
+      const t = b.querySelector("[data-k=title]"), p = b.querySelector("[data-k=proofUrl]");
+      if (!t.value.trim() && (b.querySelector("[data-k=details]").value.trim() || p.value.trim())) { flag(t, "Give this achievement a title."); ok = false; }
+      if (p.value && !p.checkValidity()) { flag(p, "Enter a full link starting with https://"); ok = false; }
+    });
+    return ok;
+  }
+
+  function say(kind, msg) { const s = $("status"); s.className = "status " + kind; s.textContent = msg; }
+
+  async function publish(e) {
+    e.preventDefault();
+    say("", "");
+    if (!validate()) { say("bad", "Fix the highlighted fields and publish again."); return; }
+
+    const body = {
+      category: $("category").value,
+      title: genTitle(),
+      markdownContent: $("content").value.trim(),
+      status: "PUBLISHED"
+    };
+
+    const btn = $("publish"); btn.disabled = true; btn.textContent = "Publishing…";
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = "Bearer " + token;
+
+      const res = await fetch(API, { method: "POST", headers, body: JSON.stringify(body) });
+      if (res.status === 201 || res.ok) {
+        say("ok", "Published successfully! Your guide is now live in the Junior Feed.");
+        setTimeout(() => {
+          showTab("qa");
+        }, 1500);
+      } else {
+        const d = await res.json().catch(() => ({}));
+        say("bad", d.message || "Could not publish. Try again.");
+      }
+    } catch (_) {
+      say("bad", "Could not reach the server. Check your connection and try again.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Publish guide";
+    }
+  }
+
+  $("add-ach").addEventListener("click", () => addAchievement());
+  list.addEventListener("click", (e) => {
+    if (e.target.matches("[data-remove]")) { e.target.closest(".ach").remove(); renumber(); renderPreview(); }
+  });
+  list.addEventListener("change", (e) => { if (e.target.matches("[data-k=type]")) syncTypeHints(e.target.closest(".ach")); });
+  $("form").addEventListener("input", renderPreview);
+  $("form").addEventListener("change", renderPreview);
+  $("form").addEventListener("submit", publish);
+
+  // Initialize
+  addAchievement("SDE Intern at Zoho (Offer converted to PPO)", "placement", "Year 4");
+  addAchievement("Department Rank 4 with 8.9 CGPA", "academic", "Year 3");
+  renderPreview();
+
+  // Load questions for Q&A queue on startup
+  loadSeniorQuestions();
+</script>
+</body>
+</html>

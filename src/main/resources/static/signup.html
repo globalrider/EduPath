@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="EduPath Account Registration — Create your account using your unique College Register Number.">
+  <title>Sign Up (First Time) · EduPath</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Topbar */
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.85rem 1.5rem;
+    }
+    .topbar-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .home-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: color 0.15s ease;
+    }
+    .home-link:hover {
+      color: var(--text);
+    }
+    .btn-login-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 700;
+      border: 1px solid #bfdbfe;
+      background: #eff6ff;
+      padding: 0.4rem 0.9rem;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn-login-link:hover {
+      background: #dbeafe;
+    }
+
+    /* Signup Container */
+    .signup-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 1.5rem;
+    }
+    .signup-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      width: 100%;
+      max-width: 500px;
+      padding: 2.5rem 2.25rem;
+    }
+    .signup-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .signup-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #1e40af;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+    }
+    .signup-header h1 {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+    }
+    .signup-header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.86rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+    }
+    .form-hint {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--primary);
+    }
+    .form-input, .form-select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 0.72rem 0.85rem;
+      font-size: 0.92rem;
+      color: var(--text);
+      transition: all 0.15s ease;
+    }
+    .form-input:focus, .form-select:focus {
+      outline: 2px solid var(--primary);
+      outline-offset: 1px;
+      border-color: var(--primary);
+    }
+
+    /* Role selection cards */
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 0.4rem;
+    }
+    .role-card {
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem 0.75rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+      background: var(--bg);
+    }
+    .role-card:hover {
+      border-color: #bfdbfe;
+      background: #eff6ff;
+    }
+    .role-card.selected {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+    .role-card input[type="radio"] {
+      display: none;
+    }
+    .role-icon {
+      font-size: 1.35rem;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    .role-title {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .role-sub {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Submit Button */
+    .btn-submit {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 0.82rem 1rem;
+      font-size: 0.98rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: background 0.15s ease;
+      margin-top: 1.25rem;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    }
+    .btn-submit:hover {
+      background: var(--primary-dark);
+    }
+    .btn-submit:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    /* Notice Alerts */
+    .alert {
+      padding: 0.75rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 1.25rem;
+      display: none;
+    }
+    .alert-error {
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+    .alert-success {
+      background: #dcfce7;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+    }
+
+    .login-prompt {
+      margin-top: 1.75rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .login-prompt a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .login-prompt a:hover {
+      text-decoration: underline;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="/" class="brand">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+          <path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5"/>
+        </svg>
+        <span>EduPath</span>
+      </a>
+
+      <div class="nav-links">
+        <a href="/" class="home-link">Home</a>
+        <a href="/login.html" class="btn-login-link">Already Registered? Log In →</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Signup Form Area -->
+  <div class="signup-wrapper">
+    <div class="signup-card">
+      <div class="signup-header">
+        <span class="signup-badge">First-Time Registration</span>
+        <h1>Create EduPath Account</h1>
+        <p>Your College Register Number uniquely identifies you in the database and determines your access role.</p>
+      </div>
+
+      <!-- Alerts -->
+      <div class="alert alert-error" id="error-alert" role="alert"></div>
+      <div class="alert alert-success" id="success-alert" role="status"></div>
+
+      <!-- Form -->
+      <form id="signup-form">
+        <!-- 1. Register Number -->
+        <div class="form-group">
+          <label class="form-label" for="regNo">
+            <span>College Register Number *</span>
+            <span class="form-hint">Unique Identifier</span>
+          </label>
+          <input type="text" id="regNo" class="form-input" required placeholder="e.g. 24CS105 or REG2024" autocomplete="off" style="text-transform:uppercase;">
+          <small style="display:block;font-size:0.75rem;color:var(--muted);margin-top:0.3rem;">
+            This uniquely identifies your record and cannot be duplicated.
+          </small>
+        </div>
+
+        <!-- 2. Full Name -->
+        <div class="form-group">
+          <label class="form-label" for="name">
+            <span>Full Name *</span>
+          </label>
+          <input type="text" id="name" class="form-input" required placeholder="e.g. Rahul Sharma" autocomplete="name">
+        </div>
+
+        <!-- 3. College Email -->
+        <div class="form-group">
+          <label class="form-label" for="email">
+            <span>College / Student Email *</span>
+          </label>
+          <input type="email" id="email" class="form-input" required placeholder="rahul@edupath.edu" autocomplete="email">
+        </div>
+
+        <!-- 4. Password -->
+        <div class="form-group">
+          <label class="form-label" for="password">
+            <span>Password *</span>
+          </label>
+          <input type="password" id="password" class="form-input" required placeholder="At least 6 characters" autocomplete="new-password">
+        </div>
+
+        <!-- 5. Role Selection -->
+        <div class="form-group">
+          <label class="form-label">
+            <span>Select Your College Role *</span>
+          </label>
+          <div class="role-grid">
+            <label class="role-card selected" id="card-junior" onclick="selectRole('JUNIOR')">
+              <input type="radio" name="role" value="JUNIOR" checked>
+              <span class="role-icon">🎓</span>
+              <span class="role-title">Junior Student</span>
+              <span class="role-sub">1st – 3rd Year · Guidance</span>
+            </label>
+
+            <label class="role-card" id="card-senior" onclick="selectRole('SENIOR')">
+              <input type="radio" name="role" value="SENIOR">
+              <span class="role-icon">👨‍💻</span>
+              <span class="role-title">Senior Mentor</span>
+              <span class="role-sub">4th Year · Answer Q&amp;A</span>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btn-submit">
+          <span>Complete Registration &amp; Enter Portal</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </form>
+
+      <div class="login-prompt">
+        Already have an EduPath account?
+        <a href="/login.html">Log In with your Register Number →</a>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    EduPath Student Connecting Platform · Running on http://localhost:8080
+  </footer>
+
+  <script>
+    let selectedRole = "JUNIOR";
+
+    function selectRole(role) {
+      selectedRole = role;
+      document.getElementById("card-junior").classList.toggle("selected", role === "JUNIOR");
+      document.getElementById("card-senior").classList.toggle("selected", role === "SENIOR");
+      const radio = document.querySelector(`input[name="role"][value="${role}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    const form = document.getElementById("signup-form");
+    const regNoInput = document.getElementById("regNo");
+    const nameInput = document.getElementById("name");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const submitBtn = document.getElementById("btn-submit");
+    const errorAlert = document.getElementById("error-alert");
+    const successAlert = document.getElementById("success-alert");
+
+    function showError(msg) {
+      errorAlert.textContent = msg;
+      errorAlert.style.display = "block";
+      successAlert.style.display = "none";
+    }
+
+    function showSuccess(msg) {
+      successAlert.textContent = msg;
+      successAlert.style.display = "block";
+      errorAlert.style.display = "none";
+    }
+
+    form.addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const regNo = regNoInput.value.trim().toUpperCase();
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim().toLowerCase();
+      const password = passwordInput.value;
+      const role = selectedRole;
+
+      if (!regNo || !name || !email || !password) {
+        showError("Please fill in all required fields including your Register Number.");
+        return;
+      }
+
+      if (password.length < 6) {
+        showError("Password must be at least 6 characters long.");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Creating Account…";
+      errorAlert.style.display = "none";
+
+      try {
+        const response = await fetch("/api/v1/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ regNo, name, email, password, role })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          const authData = data.data;
+          const user = authData.user || {
+            id: authData.userId,
+            regNo: authData.regNo || regNo,
+            name: authData.name || name,
+            email: authData.email || email,
+            role: authData.role || role
+          };
+          const token = authData.token;
+
+          // Store credentials in localStorage
+          localStorage.setItem("jwt", token);
+          localStorage.setItem("user", JSON.stringify(user));
+
+          // Sync preview role
+          try {
+            await fetch("/api/dev/preview-role", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ role: user.role })
+            });
+          } catch (_) {}
+
+          // Determine redirection based on the role stored in DB
+          const verifiedRole = (user.role || "").toUpperCase();
+          if (verifiedRole === "JUNIOR") {
+            showSuccess(`Account created for ${user.name} (Reg No: ${regNo})! Opening Junior Portal…`);
+            setTimeout(() => {
+              window.location.href = "/junior.html";
+            }, 900);
+          } else {
+            showSuccess(`Mentor account created for ${user.name} (Reg No: ${regNo})! Opening Senior Portal…`);
+            setTimeout(() => {
+              window.location.href = "/senior.html";
+            }, 900);
+          }
+        } else {
+          showError(data.message || "Registration failed. Please check your Register Number and details.");
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Complete Registration & Enter Portal →";
+        }
+      } catch (err) {
+        showError("Could not connect to EduPath server. Please ensure the backend is running on port 8080.");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Complete Registration & Enter Portal →";
+      }
+    });
+  </script>
+</body>
+</html>

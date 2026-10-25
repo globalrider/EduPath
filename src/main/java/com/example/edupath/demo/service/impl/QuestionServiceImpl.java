@@ -48,7 +48,7 @@ public class QuestionServiceImpl implements QuestionService {
         }
 
         return list.stream()
-                .map(q -> QuestionResponse.fromEntity(q, false))
+                .map(q -> QuestionResponse.fromEntity(q, true))
                 .collect(Collectors.toList());
     }
 
@@ -104,7 +104,8 @@ public class QuestionServiceImpl implements QuestionService {
         answer.setQuestion(question);
         answer.setAuthor(author);
         answer.setAnswerBody(request.getAnswerBody());
-        answer.setIsVerifiedAnswer(false);
+        boolean isSenior = author.getRole() == Role.SENIOR || author.getRole() == Role.ALUMNI || author.getRole() == Role.ADMIN;
+        answer.setIsVerifiedAnswer(isSenior);
 
         Answer saved = answerRepository.save(answer);
         return AnswerResponse.fromEntity(saved);

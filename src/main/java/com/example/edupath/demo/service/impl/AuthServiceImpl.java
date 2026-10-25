@@ -39,21 +39,28 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse register(AuthRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("User with email '" + request.getEmail() + "' already exists");
+        if (request.getRegNo() == null || request.getRegNo().trim().isBlank()) {
+            throw new IllegalArgumentException("Register Number is required to uniquely identify your account");
         }
-        if (request.getRegNo() != null && !request.getRegNo().isBlank()) {
-            if (userRepository.existsByRegNo(request.getRegNo())) {
-                throw new IllegalArgumentException("Registration number '" + request.getRegNo() + "' is already registered");
-            }
+        String cleanRegNo = request.getRegNo().trim().toUpperCase();
+        if (userRepository.existsByRegNoIgnoreCase(cleanRegNo)) {
+            throw new IllegalArgumentException("Register Number '" + cleanRegNo + "' is already registered in EduPath");
+        }
+
+        if (request.getEmail() == null || request.getEmail().trim().isBlank()) {
+            throw new IllegalArgumentException("Email address is required for registration");
+        }
+        String cleanEmail = request.getEmail().trim().toLowerCase();
+        if (userRepository.existsByEmailIgnoreCase(cleanEmail)) {
+            throw new IllegalArgumentException("User with email '" + cleanEmail + "' already exists");
         }
 
         Role assignedRole = request.getRole() != null ? request.getRole() : Role.JUNIOR;
 
         User user = new User();
-        user.setRegNo(request.getRegNo());
-        user.setName(request.getName() != null ? request.getName() : "Student");
-        user.setEmail(request.getEmail());
+        user.setRegNo(cleanRegNo);
+        user.setName(request.getName() != null && !request.getName().trim().isBlank() ? request.getName().trim() : "Student");
+        user.setEmail(cleanEmail);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(assignedRole);
 
@@ -72,11 +79,24 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public AuthResponse login(AuthRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid credentials: user not found"));
+        String identifier = null;
+        if (request.getRegNo() != null && !request.getRegNo().trim().isBlank()) {
+            identifier = request.getRegNo().trim();
+        } else if (request.getEmail() != null && !request.getEmail().trim().isBlank()) {
+            identifier = request.getEmail().trim();
+        }
+
+        if (identifier == null || identifier.isBlank()) {
+            throw new IllegalArgumentException("Please provide your Register Number or Email to log in");
+        }
+
+        final String query = identifier;
+        User user = userRepository.findByRegNoIgnoreCase(query)
+                .or(() -> userRepository.findByEmailIgnoreCase(query))
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid credentials: no account found with Register Number or Email '" + query + "'"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Invalid email or password");
+            throw new IllegalArgumentException("Invalid password for " + query);
         }
 
         String token = jwtUtil.generateToken(user);

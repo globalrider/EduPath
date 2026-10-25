@@ -13,8 +13,6 @@ public class AuthRequest {
     @Size(max = 100, message = "Name must not exceed 100 characters")
     private String name;
 
-    @Email(message = "Invalid email format")
-    @NotBlank(message = "Email is required")
     @Size(max = 150, message = "Email must not exceed 150 characters")
     private String email;
 
