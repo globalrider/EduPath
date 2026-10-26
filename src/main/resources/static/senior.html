@@ -753,10 +753,26 @@
     say("", "");
     if (!validate()) { say("bad", "Fix the highlighted fields and publish again."); return; }
 
+    const achs = collect().filter((a) => a.title);
+    let fullMarkdown = $("content").value.trim();
+    if (achs.length > 0) {
+      const achText = "\n\n### 🏆 Verified Achievements & Career Milestones:\n" +
+        achs.map(a => `- **${a.title}** (${a.when || 'College'}) [${a.type || 'achievement'}]: ${a.details || ''}${a.proofUrl ? ` (Proof: ${a.proofUrl})` : ''}`).join("\n");
+      fullMarkdown = fullMarkdown + achText;
+    }
+
+    let postTitle = genTitle();
+    if (achs.length > 0 && achs[0].title) {
+      const topAch = achs[0].title;
+      if (!postTitle.toLowerCase().includes(topAch.toLowerCase())) {
+        postTitle = `${postTitle} — ${topAch}`;
+      }
+    }
+
     const body = {
       category: $("category").value,
-      title: genTitle(),
-      markdownContent: $("content").value.trim(),
+      title: postTitle,
+      markdownContent: fullMarkdown,
       status: "PUBLISHED"
     };
 

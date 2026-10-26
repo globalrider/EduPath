@@ -458,17 +458,26 @@ async function handleGenerateRoadmap(postId) {
     return;
   }
 
-  const post = MOCK_POSTS.find(function (item) {
-    return item.id === postId;
-  });
-
-  if (!post) {
-    showToast("Could not find the selected senior post.");
-    return;
+  let post = null;
+  if (typeof postId === "object" && postId !== null) {
+    post = postId;
+  } else if (postId) {
+    post = (window.allLoadedPosts || []).find(item => item.id === postId)
+        || MOCK_POSTS.find(item => item.id === postId);
   }
 
-  const goal = "Prepare for a software engineering career based on this senior's experience: "
-    + post.title;
+  let studentUser = null;
+  try {
+    const raw = localStorage.getItem("user");
+    if (raw) studentUser = JSON.parse(raw);
+  } catch (_) {}
+
+  const sem = (studentUser && studentUser.semester) ? Number(studentUser.semester) : 3;
+  const cgpa = (studentUser && studentUser.cgpa) ? Number(studentUser.cgpa) : 8.8;
+
+  const goal = post
+    ? "Prepare for career based on senior playbook & achievements: " + post.title + (post.summary ? " — " + post.summary : "")
+    : "Comprehensive full-stack and algorithmic preparation for top product company recruitment";
 
   const originalText = button ? button.textContent : "";
 

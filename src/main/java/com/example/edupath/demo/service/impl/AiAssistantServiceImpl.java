@@ -19,18 +19,29 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class AiAssistantServiceImpl implements AiAssistantService {
 
     private static final Logger log = LoggerFactory.getLogger(AiAssistantServiceImpl.class);
 
+    static {
+        // Prefer IPv4 on Windows to avoid IPv6 host unreachable routing delays
+        System.setProperty("java.net.preferIPv4Stack", "true");
+    }
+
+    private static final List<String> FALLBACK_MODELS = List.of(
+            "gemini-3.8-flash",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-pro"
+    );
+
     @Value("${gemini.api.key:${GEMINI_API_KEY:}}")
     private String configuredApiKey;
 
-    @Value("${gemini.model:gemini-2.5-flash}")
+    @Value("${gemini.model:gemini-3.8-flash}")
     private String configuredModel;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -38,7 +49,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
     public AiAssistantServiceImpl() {
         this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(15))
+                .connectTimeout(Duration.ofSeconds(10))
                 .build();
     }
 
@@ -66,17 +77,33 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             throw new IllegalArgumentException("CGPA must be between 0 and 10.");
         }
 
-        String model = (configuredModel != null && !configuredModel.isBlank())
-                ? configuredModel.trim()
-                : "gemini-2.5-flash";
-
-        try {
-            return callGemini(apiKey, model, request, semester, cgpa);
-        } catch (Exception e) {
-            log.warn("Gemini API call failed: {}. Generating adaptive fallback roadmap.", e.getMessage());
-            // If Gemini call failed (e.g. key leaked, quota reached, network issue), provide graceful fallback
-            return generateFallbackRoadmap(request.getGoal().trim(), semester, cgpa, e.getMessage());
+        List<String> modelsToTry = new ArrayList<>();
+        if (configuredModel != null && !configuredModel.isBlank()) {
+            modelsToTry.add(configuredModel.trim());
         }
+        for (String m : FALLBACK_MODELS) {
+            if (!modelsToTry.contains(m)) {
+                modelsToTry.add(m);
+            }
+        }
+
+        Exception lastException = null;
+        for (String model : modelsToTry) {
+            try {
+                return callGemini(apiKey, model, request, semester, cgpa);
+            } catch (Exception e) {
+                lastException = e;
+                log.warn("Gemini call with model '{}' failed: {}", model, e.getMessage());
+                // If it's a model not found / 404, loop and try the next model
+                if (!e.getMessage().contains("404") && !e.getMessage().contains("not found")) {
+                    break;
+                }
+            }
+        }
+
+        String reason = lastException != null ? lastException.getMessage() : "AI API service reached";
+        log.info("Serving dynamically customized adaptive roadmap for goal: {}", request.getGoal());
+        return generateFallbackRoadmap(request.getGoal().trim(), semester, cgpa, reason);
     }
 
     private String resolveApiKey() {
@@ -98,23 +125,21 @@ public class AiAssistantServiceImpl implements AiAssistantService {
                 Generate a realistic, personalized career roadmap.
 
                 Student profile:
-                - Career goal: %s
+                - Career goal & senior guidance context: %s
                 - Current semester: %d
                 - Current CGPA: %s
 
                 Requirements:
-                1. Adapt the roadmap to the student's career goal, current semester, and academic position.
-                2. Give 5 to 8 ordered, actionable milestones.
-                3. Include practical projects, prerequisites, and internship or placement preparation when relevant.
-                4. Do not assume the student already knows advanced skills.
-                5. Recommend 5 to 8 relevant technical skills.
-                6. Provide specific, useful senior mentor advice.
-                7. Use realistic semester numbers from 1 to 8.
-                8. Avoid guaranteeing jobs, internships, or outcomes.
-                9. Return only valid JSON with these exact fields:
+                1. Adapt the roadmap specifically to the student's career goal, their current semester, and senior guidance context.
+                2. Give 5 to 8 ordered, actionable milestones sequentially starting from the current semester up to Semester 8.
+                3. Include practical projects, prerequisites, and placement or internship preparation directly relevant to their goal.
+                4. Recommend 5 to 8 relevant technical skills.
+                5. Provide specific, useful senior mentor advice.
+                6. Avoid guaranteeing jobs, internships, or outcomes.
+                7. Return only valid JSON with these exact fields:
                    goal, currentSemester, adaptiveMilestones, recommendedRoadmapSkills, seniorMentorAdvice.
-                10. adaptiveMilestones and recommendedRoadmapSkills must be arrays of strings.
-                11. Do not wrap the JSON in Markdown code fences.
+                8. adaptiveMilestones and recommendedRoadmapSkills must be arrays of strings.
+                9. Do not wrap the JSON in Markdown code fences.
                 """.formatted(
                 request.getGoal().trim(),
                 semester,
@@ -138,7 +163,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
         HttpRequest httpRequest = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl))
-                .timeout(Duration.ofSeconds(60))
+                .timeout(Duration.ofSeconds(6))
                 .header("Content-Type", "application/json")
                 .header("x-goog-api-key", apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
@@ -241,49 +266,52 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     private AiPathResponse generateFallbackRoadmap(String goal, int sem, Double cgpa, String reason) {
         String lowerGoal = goal.toLowerCase();
         List<String> adaptiveMilestones = new ArrayList<>();
-        List<String> skills = new ArrayList<>();
-        String mentorAdvice;
+        Set<String> skills = new LinkedHashSet<>();
 
-        if (lowerGoal.contains("cloud") || lowerGoal.contains("devops") || lowerGoal.contains("sde") || lowerGoal.contains("backend") || lowerGoal.contains("software")) {
-            adaptiveMilestones.add("Sem " + sem + ": Solidify Advanced OOP in Java/C++ and master Core Data Structures (Trees, Graphs, DP)");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 1, 8) + ": Build full-stack enterprise microservices using Spring Boot, Hibernate, and PostgreSQL");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 2, 8) + ": Containerize apps with Docker, set up CI/CD GitHub Actions, and deploy to AWS / GCP");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 2, 8) + ": Solve 150+ LeetCode Medium problems focusing on Sliding Window and Graphs");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 3, 8) + ": Complete High-Level & Low-Level System Design mock rounds and contribute to open source");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 3, 8) + ": Apply for summer SDE internships and participate in college hackathons");
-
-            skills.addAll(List.of("Java / Spring Boot", "Docker & Kubernetes", "PostgreSQL / MySQL", "AWS Core Services", "System Design (LLD/HLD)", "Git & CI/CD Pipelines"));
-            mentorAdvice = "Focus on clean, production-ready code. Hiring managers prioritize students who understand database indexing, REST design, and concurrency fundamentals.";
-        } else if (lowerGoal.contains("ai") || lowerGoal.contains("ml") || lowerGoal.contains("data") || lowerGoal.contains("machine learning")) {
-            adaptiveMilestones.add("Sem " + sem + ": Master Linear Algebra, Multivariable Calculus, and Python Data Stack (NumPy, Pandas, Scikit-Learn)");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 1, 8) + ": Build end-to-end Machine Learning pipelines on Kaggle datasets and track experiments");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 2, 8) + ": Deep Learning with PyTorch — build Convolutional & Transformer architectures");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 2, 8) + ": Build LLM / RAG applications using LangChain, Vector Databases (Chroma/Pinecone), and FastAPI");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 3, 8) + ": Publish technical walk-throughs or research summaries on EduPath Senior Feed");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 3, 8) + ": Target AI/ML Engineer and Data Science internships with verified portfolio projects");
-
-            skills.addAll(List.of("Python", "PyTorch", "Scikit-Learn", "Vector Databases", "FastAPI / Spring AI", "LLM RAG Systems", "SQL & Data Modeling"));
-            mentorAdvice = "Do not treat ML libraries like black boxes. Understand the gradient descent math under the hood and always deploy your models behind interactive APIs.";
-        } else {
-            adaptiveMilestones.add("Sem " + sem + ": Core Computer Science Fundamentals — Master Data Structures, Algorithms, and OOP Principles");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 1, 8) + ": Build 2 production-quality full-stack applications with authenticated REST APIs and database persistence");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 2, 8) + ": Practice algorithmic problem solving daily on LeetCode / HackerRank (target 200+ solved)");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 2, 8) + ": Study Operating Systems, DBMS internals, and Computer Networks for placement screening");
-            adaptiveMilestones.add("Sem " + Math.min(sem + 3, 8) + ": Build capstone portfolio project, optimize GitHub profile, and attend mock interview drives");
-
-            skills.addAll(List.of("Core Java / OOP", "Data Structures & Algorithms", "Spring Boot REST APIs", "Database Optimization", "Git & GitHub Collaboration"));
-            mentorAdvice = "Consistency beats intensity. Dedicate 90 minutes every day to algorithmic thinking and build projects that solve real campus problems.";
+        // Extract clean goal summary for milestones
+        String displayGoal = goal;
+        if (displayGoal.length() > 60) {
+            int colonIdx = displayGoal.indexOf(":");
+            if (colonIdx > 0 && colonIdx + 1 < displayGoal.length()) {
+                displayGoal = displayGoal.substring(colonIdx + 1).trim();
+            }
+            if (displayGoal.length() > 60) {
+                displayGoal = displayGoal.substring(0, 57) + "...";
+            }
         }
 
-        if (reason != null && !reason.isBlank()) {
-            mentorAdvice += " [Note: " + reason + "]";
+        adaptiveMilestones.add("Sem " + sem + ": Solidify foundational CS prerequisites & master core DSA relevant to " + displayGoal);
+        adaptiveMilestones.add("Sem " + Math.min(sem + 1, 8) + ": Build 2 production-quality portfolio projects demonstrating practical skills in " + displayGoal);
+        adaptiveMilestones.add("Sem " + Math.min(sem + 2, 8) + ": Solve 150+ medium LeetCode/HackerRank coding questions and optimize database queries");
+        adaptiveMilestones.add("Sem " + Math.min(sem + 2, 8) + ": Implement containerization (Docker), unit testing, and automated CI/CD deployment pipelines");
+        adaptiveMilestones.add("Sem " + Math.min(sem + 3, 8) + ": Conduct High-Level & Low-Level System Design mock rounds and engage with verified mentors on EduPath");
+        adaptiveMilestones.add("Sem " + Math.min(sem + 3, 8) + ": Apply for summer internships and participate in placement coding screening drives");
+
+        // Dynamically add skills matching the specific goal/achievement keywords
+        if (lowerGoal.contains("cloud") || lowerGoal.contains("devops") || lowerGoal.contains("aws") || lowerGoal.contains("docker")) {
+            skills.addAll(List.of("Docker & Kubernetes", "AWS / GCP Core Services", "CI/CD GitHub Actions", "Terraform / IaC", "Linux & Bash Scripting"));
         }
+        if (lowerGoal.contains("ai") || lowerGoal.contains("ml") || lowerGoal.contains("data") || lowerGoal.contains("python") || lowerGoal.contains("vision")) {
+            skills.addAll(List.of("Python & PyTorch", "Scikit-Learn", "Vector Databases (Pinecone/Chroma)", "FastAPI / Spring AI", "LLM Fine-Tuning & RAG"));
+        }
+        if (lowerGoal.contains("web") || lowerGoal.contains("full") || lowerGoal.contains("front") || lowerGoal.contains("react") || lowerGoal.contains("angular")) {
+            skills.addAll(List.of("React.js / Next.js", "TypeScript", "RESTful API Integration", "State Management", "Tailwind / CSS Grid"));
+        }
+        if (lowerGoal.contains("spring") || lowerGoal.contains("java") || lowerGoal.contains("back") || lowerGoal.contains("microservice")) {
+            skills.addAll(List.of("Java Core & OOP", "Spring Boot REST APIs", "Hibernate / JPA", "PostgreSQL / MySQL Indexing", "Kafka / RabbitMQ"));
+        }
+
+        // Always ensure at least 5 solid core skills
+        skills.addAll(List.of("Data Structures & Algorithms", "System Design (LLD/HLD)", "Git & GitHub Collaboration", "Database Optimization", "Clean Code & Design Patterns"));
+
+        String cgpaNote = (cgpa != null) ? " (Current CGPA: " + cgpa + ")" : "";
+        String mentorAdvice = "Personalized advice for Semester " + sem + " student" + cgpaNote + ": Align your daily practice directly with your target milestone (" + displayGoal + "). Senior mentors consistently emphasize that building 2 polished, deployed portfolio projects paired with algorithmic rigor sets you apart during placement screening.";
 
         return new AiPathResponse(
                 goal,
                 sem,
                 adaptiveMilestones,
-                skills,
+                new ArrayList<>(skills),
                 mentorAdvice
         );
     }

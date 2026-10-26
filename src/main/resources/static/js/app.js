@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════ */
 
 // ───────────────────────────────────────────
-// 1. PROFILE & MOCK DATA
+// 1. PROFILE & DYNAMIC STUDENT STATE
 // ───────────────────────────────────────────
 
 let currentJuniorUser = null;
@@ -12,17 +12,53 @@ try {
   if (u) currentJuniorUser = JSON.parse(u);
 } catch (_) {}
 
-const JUNIOR_PROFILE = {
-  name: (currentJuniorUser && currentJuniorUser.name) ? currentJuniorUser.name : "Vignesh K",
-  initials: (currentJuniorUser && currentJuniorUser.name)
-    ? currentJuniorUser.name.split(" ").map(w => w[0]).join("")
-    : "VK",
-  regNumber: "23CS101",
-  role: "Junior Student",
-  department: "Computer Science & Engineering",
-  year: "3rd Year",
-  email: (currentJuniorUser && currentJuniorUser.email) ? currentJuniorUser.email : "vignesh@edupath.edu"
-};
+function getStudentAcademicProfile() {
+  const u = currentJuniorUser || {};
+  let custom = {};
+  try {
+    const key = "edupath_student_acad_" + (u.regNo || u.email || "default");
+    const stored = localStorage.getItem(key);
+    if (stored) custom = JSON.parse(stored);
+  } catch (_) {}
+
+  // Infer semester from regNo if available (e.g. 24 -> Sem 2, 23 -> Sem 4, 22 -> Sem 6)
+  let inferredSem = 3;
+  if (u.regNo && u.regNo.length >= 2) {
+    const yrPrefix = u.regNo.substring(0, 2);
+    if (yrPrefix === "24" || yrPrefix === "25") inferredSem = 2;
+    else if (yrPrefix === "23") inferredSem = 4;
+    else if (yrPrefix === "22") inferredSem = 6;
+  }
+
+  const name = u.name || "Junior Student";
+  const initials = name.split(" ").filter(Boolean).map(w => w[0]).join("") || "JS";
+
+  return {
+    name: name,
+    initials: initials,
+    regNumber: u.regNo || "24CS101",
+    role: u.role || "Junior Student",
+    department: "Computer Science & Engineering",
+    year: (inferredSem <= 2 ? "1st" : inferredSem <= 4 ? "2nd" : "3rd") + " Year",
+    email: u.email || "student@edupath.edu",
+    semester: Number(custom.semester || u.semester || inferredSem),
+    cgpa: Number(custom.cgpa || u.cgpa || 8.6),
+    careerGoal: custom.careerGoal || u.careerGoal || "Full-Stack Software Development Engineer"
+  };
+}
+
+function saveStudentAcademicProfile(semester, cgpa, careerGoal) {
+  const u = currentJuniorUser || {};
+  const key = "edupath_student_acad_" + (u.regNo || u.email || "default");
+  const data = {
+    semester: Number(semester),
+    cgpa: Number(cgpa),
+    careerGoal: careerGoal
+  };
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+const JUNIOR_PROFILE = getStudentAcademicProfile();
 
 window.signOut = function() {
   localStorage.removeItem("jwt");
@@ -34,11 +70,12 @@ window.signOut = function() {
 document.addEventListener("DOMContentLoaded", function () {
   const nameEl = document.getElementById("user-display-name");
   const initEl = document.getElementById("user-avatar-initials");
-  if (nameEl && currentJuniorUser) {
-    nameEl.textContent = `${currentJuniorUser.name} (${currentJuniorUser.role || 'Junior'})`;
+  const profile = getStudentAcademicProfile();
+  if (nameEl) {
+    nameEl.textContent = `${profile.name} (${profile.role}) · ${profile.regNumber}`;
   }
-  if (initEl && JUNIOR_PROFILE.initials) {
-    initEl.textContent = JUNIOR_PROFILE.initials;
+  if (initEl && profile.initials) {
+    initEl.textContent = profile.initials;
   }
 });
 
@@ -96,6 +133,9 @@ const MOCK_POSTS = [
   }
 ];
 
+// In-memory cache of all loaded posts (both pre-seeded and dynamically published)
+let allLoadedPosts = [...MOCK_POSTS];
+
 // ───────────────────────────────────────────
 // 2. DOM REFERENCES
 // ───────────────────────────────────────────
@@ -138,7 +178,8 @@ function tagClass(label) {
     Internships: "tag--intern",
     Internship: "tag--intern",
     Highlight: "tag--high",
-    "Higher Studies": "tag--high"
+    "Higher Studies": "tag--high",
+    "Senior Achievement": "tag--high"
   };
   return map[label] || "tag--acad";
 }
@@ -158,7 +199,7 @@ function renderSeniorPosts(activeCategory) {
     createElement(
       "p",
       "view-subtitle",
-      "Learn directly from verified seniors and alumni about semester preparation, CGPA strategy, coding interviews, and career playbooks."
+      "Learn directly from verified seniors and alumni about semester preparation, CGPA strategy, coding interviews, and verified career playbooks."
     )
   );
 
@@ -197,23 +238,33 @@ async function renderPostsList(container, categoryFilter) {
       const data = await res.json();
       if (data.data && Array.isArray(data.data)) {
         data.data.forEach(p => {
+          let company = p.category || "Placement";
+          if (p.title && p.title.includes("—")) {
+            const parts = p.title.split("—");
+            if (parts.length > 1) company = parts[1].trim();
+          }
+
           combinedPosts.unshift({
             id: p.postId,
-            seniorName: p.authorName || "Senior Author",
+            seniorName: p.authorName || "Senior Mentor",
             year: p.authorRole || "SENIOR",
-            company: p.category || "Placement",
-            jobTitle: "Senior Guide",
+            company: company,
+            jobTitle: "Verified Senior Guide",
             title: p.title,
-            summary: p.markdownContent ? p.markdownContent.slice(0, 300) + (p.markdownContent.length > 300 ? "..." : "") : "",
-            tags: [p.category || "Academics"],
+            summary: p.markdownContent ? p.markdownContent.slice(0, 350) + (p.markdownContent.length > 350 ? "..." : "") : "",
+            fullContent: p.markdownContent || "",
+            tags: [p.category || "Academics", "Senior Achievement"],
             journey: [
-              { year: "Key Advice", desc: p.markdownContent ? p.markdownContent.slice(0, 180) + "..." : "Follow structured milestones." }
+              { year: "Achievement & Guide", desc: p.markdownContent ? p.markdownContent.slice(0, 220) + (p.markdownContent.length > 220 ? "..." : "") : "Follow structured milestones." }
             ]
           });
         });
       }
     }
   } catch (_) {}
+
+  // Update global registry so all newly loaded posts can generate roadmaps
+  allLoadedPosts = combinedPosts;
 
   // Filter if needed
   if (categoryFilter) {
@@ -236,8 +287,9 @@ async function renderPostsList(container, categoryFilter) {
 
     // Header
     var header = createElement("div", "post-card__header");
-    var initials = post.seniorName
+    var initials = (post.seniorName || "SM")
       .split(" ")
+      .filter(Boolean)
       .map(function (w) { return w[0]; })
       .join("");
     header.appendChild(createElement("span", "avatar avatar--md", initials));
@@ -293,7 +345,8 @@ async function renderPostsList(container, categoryFilter) {
     </svg> Generate Personalized Roadmap`;
     btn.setAttribute("type", "button");
     btn.addEventListener("click", function () {
-      handleGenerateRoadmap(post.id, btn);
+      // Pass the actual post object so newly created achievements work seamlessly
+      handleGenerateRoadmap(post, btn);
     });
 
     card.appendChild(btn);
@@ -307,7 +360,6 @@ function renderRaiseQuestionView() {
   var wrap = createElement("div", "raise-question-container");
   wrap.style.cssText = "max-width: 900px; margin: 0 auto; display: grid; gap: 1.5rem;";
 
-  // Heading & banner
   var head = createElement("div", "view-header");
   head.appendChild(createElement("h2", "view-heading", "Raise a Question to Seniors & Alumni"));
   head.appendChild(
@@ -317,65 +369,46 @@ function renderRaiseQuestionView() {
       "Have a question about academics, placements, or college life? Ask our community of verified seniors and alumni."
     )
   );
-
-  var banner = createElement("div", "forum-banner");
-  banner.style.cssText = "background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.9rem 1.2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;";
-  banner.innerHTML = `
-    <div>
-      <strong style="color:#1e40af;font-size:0.92rem;">💡 Dedicated Role-Aware Q&amp;A Forum</strong>
-      <p style="margin:2px 0 0;font-size:0.83rem;color:#1e3a8a">You can also view the full dual-view Senior answer queue.</p>
-    </div>
-    <a href="/forum.html" style="background:#2563eb;color:#fff;padding:0.45rem 1rem;border-radius:6px;font-size:0.82rem;font-weight:600;text-decoration:none;">Open Full Forum ➔</a>
-  `;
-  head.appendChild(banner);
   wrap.appendChild(head);
 
-  // Two column layout: Ask Form + My Questions List
-  var grid = createElement("div", "qa-grid");
-  grid.style.cssText = "display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:1.5rem;";
-  if (window.innerWidth < 850) {
-    grid.style.gridTemplateColumns = "1fr";
-  }
+  var grid = createElement("div", "qa-layout-grid");
+  grid.style.cssText = "display:grid;grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));gap:1.5rem;";
 
-  // Column 1: Ask Form Card
   var formCard = createElement("div", "card");
   formCard.style.cssText = "background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;";
   formCard.innerHTML = `
-    <h3 style="font-size:1.1rem;margin-bottom:0.25rem;">Ask a New Question</h3>
-    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.25rem;">Your question will be broadcast to all Seniors and Alumni mentors.</p>
-    <form id="junior-qa-form">
-      <div style="margin-bottom:1rem;">
-        <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.35rem;" for="jq-title">Question Title *</label>
-        <input style="width:100%;border:1px solid var(--border);border-radius:6px;padding:0.6rem 0.75rem;font-size:0.9rem;"
-               id="jq-title" required placeholder="What would you like guidance with?">
+    <h3 style="font-size:1.15rem;margin-bottom:0.75rem;font-weight:700;">Ask Your Question</h3>
+    <form id="junior-qa-form" style="display:grid;gap:1rem;">
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.35rem;">Question Title *</label>
+        <input type="text" id="jq-title" required placeholder="e.g. How to prepare for campus placement coding rounds in Sem 5?" 
+          style="width:100%;padding:0.65rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.9rem;">
       </div>
-      <div style="margin-bottom:1rem;">
-        <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.35rem;" for="jq-category">Topic *</label>
-        <select style="width:100%;border:1px solid var(--border);border-radius:6px;padding:0.6rem 0.75rem;font-size:0.9rem;"
-                id="jq-category" required>
-          <option value="Academics">Academics</option>
-          <option value="Internships">Internships</option>
-          <option value="Higher Studies">Higher Studies</option>
-          <option value="Placement">Placement</option>
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.35rem;">Category</label>
+        <select id="jq-category" style="width:100%;padding:0.65rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.9rem;">
+          <option value="Placement">Placement Preparation</option>
+          <option value="Academics">Academic Strategy &amp; CGPA</option>
+          <option value="Internships">Internships &amp; Resume</option>
+          <option value="Higher Studies">Higher Studies (GATE/MS)</option>
         </select>
       </div>
-      <div style="margin-bottom:1rem;">
-        <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.35rem;" for="jq-body">Question Details *</label>
-        <textarea style="width:100%;min-height:100px;border:1px solid var(--border);border-radius:6px;padding:0.6rem 0.75rem;font-size:0.9rem;"
-                  id="jq-body" required placeholder="Describe your question, your current semester, and what guidance you need..."></textarea>
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.35rem;">Detailed Context / Query *</label>
+        <textarea id="jq-body" rows="4" required placeholder="Provide details about your current semester, skills, or obstacles..."
+          style="width:100%;padding:0.65rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.9rem;resize:vertical;"></textarea>
       </div>
-      <button type="submit" class="btn-primary" id="jq-submit" style="width:100%;justify-content:center;">Post Question ➔</button>
+      <button type="submit" class="btn-primary" id="jq-submit" style="padding:0.75rem;font-weight:700;">Post Question ➔</button>
     </form>
   `;
   grid.appendChild(formCard);
 
-  // Column 2: My Questions List Card
   var listCard = createElement("div", "card");
   listCard.style.cssText = "background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;";
   listCard.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-      <h3 style="font-size:1.1rem;margin:0;">Recent Q&amp;A Discussions</h3>
-      <button type="button" id="refresh-q-list" style="font-size:0.82rem;color:var(--primary);font-weight:600;">↻ Refresh</button>
+      <h3 style="font-size:1.15rem;font-weight:700;margin:0;">Recent Questions &amp; Senior Answers</h3>
+      <button id="refresh-q-list" style="background:none;border:none;color:var(--primary);cursor:pointer;font-weight:600;font-size:0.85rem;">🔄 Refresh</button>
     </div>
     <div id="questions-feed" style="display:grid;gap:1rem;max-height:450px;overflow-y:auto;padding-right:4px;">
       <p style="color:var(--muted);font-size:0.85rem;">Loading discussions...</p>
@@ -429,7 +462,6 @@ function renderRaiseQuestionView() {
     if (refreshBtn) refreshBtn.addEventListener("click", loadJuniorQuestionsList);
     loadJuniorQuestionsList();
 
-    // Auto-poll questions while user is on this view so senior replies appear automatically
     if (window._qaPollInterval) clearInterval(window._qaPollInterval);
     window._qaPollInterval = setInterval(() => {
       if (document.getElementById("questions-feed")) {
@@ -449,145 +481,204 @@ async function loadJuniorQuestionsList() {
   if (!feed) return;
 
   try {
-    let list = [];
-    const res = await fetch("/api/junior/questions");
-    if (res.ok) {
-      const data = await res.json();
-      list = Array.isArray(data) ? data : (data.data || []);
-    } else {
-      const fallback = await fetch("/api/v1/questions");
-      if (fallback.ok) {
-        const data = await fallback.json();
-        list = data.data || [];
-      }
-    }
+    const token = localStorage.getItem("jwt");
+    const headers = {};
+    if (token) headers["Authorization"] = "Bearer " + token;
 
-    if (!list || list.length === 0) {
-      feed.innerHTML = `<p style="color:var(--muted);font-size:0.85rem;">No questions posted yet. Be the first to ask!</p>`;
+    const res = await fetch("/api/junior/questions", { headers });
+    if (!res.ok) throw new Error();
+    const questions = await res.json();
+
+    if (!questions || questions.length === 0) {
+      feed.innerHTML = `<p style="color:var(--muted);font-size:0.85rem;text-align:center;padding:1rem;">No questions posted yet. Be the first to ask!</p>`;
       return;
     }
 
-    feed.innerHTML = list.map(q => {
-      const hasAccepted = q.acceptedAnswer != null;
-      const hasAnswers = (q.answers && q.answers.length > 0);
-      const answer = hasAccepted ? q.acceptedAnswer : (hasAnswers ? q.answers[0] : null);
-      const isAnswered = answer != null;
-
-      return `
-        <div style="border:1px solid var(--border);border-radius:8px;padding:1rem;background:var(--surface);margin-bottom:0.75rem;box-shadow:0 1px 2px rgba(0,0,0,0.03);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;flex-wrap:wrap;gap:0.4rem;">
-            <span class="tag ${tagClass(q.category)}">${escapeHtml(q.category || "General")}</span>
-            ${isAnswered
-              ? '<span style="font-size:0.75rem;font-weight:700;color:#15803d;background:#dcfce7;padding:0.2rem 0.55rem;border-radius:999px;">✓ Answered by Senior</span>'
-              : '<span style="font-size:0.75rem;font-weight:600;color:#b45309;background:#fef3c7;padding:0.2rem 0.55rem;border-radius:999px;">⏳ Waiting for Senior response</span>'
-            }
-          </div>
-          <h4 style="font-size:0.95rem;margin:0 0 0.35rem;color:var(--text);font-weight:700;">${escapeHtml(q.title)}</h4>
-          <p style="font-size:0.85rem;color:var(--muted);margin:0 0 0.6rem;line-height:1.45;">${escapeHtml(q.questionBody)}</p>
-
-          ${isAnswered ? `
-            <div style="margin-top:0.6rem;padding:0.75rem 1rem;background:#f0fdf4;border-left:4px solid #16a34a;border-radius:6px;font-size:0.85rem;">
-              <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.25rem;">
-                <span style="color:#15803d;font-weight:700;font-size:0.82rem;">✓ Verified Senior Guidance (${escapeHtml(answer.authorName || "Senior Mentor")}):</span>
-              </div>
-              <p style="margin:0;color:#1e293b;line-height:1.5;font-weight:500;">"${escapeHtml(answer.answerBody)}"</p>
-            </div>
-          ` : ''}
+    feed.innerHTML = questions.map(q => `
+      <div style="padding:0.85rem;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;margin-bottom:0.35rem;">
+          <span style="font-weight:700;font-size:0.9rem;color:var(--text);">${escapeHtml(q.title)}</span>
+          <span class="tag ${q.status === 'ANSWERED' ? 'tag--intern' : 'tag--acad'}" style="font-size:0.75rem;">${q.status || 'OPEN'}</span>
         </div>
-      `;
-    }).join("");
+        <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.5rem;">${escapeHtml(q.questionBody || q.body || '')}</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.76rem;color:var(--muted);">
+          <span>By: ${escapeHtml(q.studentName || 'Student')}</span>
+          <span>${(q.answers || []).length} Verified Answers</span>
+        </div>
+      </div>
+    `).join("");
   } catch (_) {
     feed.innerHTML = `<p style="color:var(--muted);font-size:0.85rem;">Could not load recent discussions.</p>`;
   }
 }
 
-/** Build Career Roadmaps View */
+/** Build Career Roadmaps View — Integrated for any logged-in student & custom goal */
 function renderRoadmapsView() {
+  const student = getStudentAcademicProfile();
   var frag = document.createDocumentFragment();
   var wrap = createElement("div", "roadmaps-container");
-  wrap.style.cssText = "max-width: 900px; margin: 0 auto;";
+  wrap.style.cssText = "max-width: 900px; margin: 0 auto; display: grid; gap: 1.5rem;";
 
-  wrap.innerHTML = `
-    <div style="margin-bottom:1.5rem;">
-      <h2 class="view-heading">AI Career &amp; Academic Roadmaps</h2>
-      <p class="view-subtitle">Interactive semester-by-semester milestone graph based on EduPath's 8-table database architecture.</p>
+  // Top header with student greeting
+  var headerDiv = createElement("div", "");
+  headerDiv.innerHTML = `
+    <h2 class="view-heading">AI Career &amp; Academic Roadmaps</h2>
+    <p class="view-subtitle">Generate customized semester-wise career milestones tailored to your dream company, current semester, and academic status.</p>
+  `;
+  wrap.appendChild(headerDiv);
+
+  // Dynamic Custom Generator Card
+  var genCard = createElement("div", "card");
+  genCard.style.cssText = "background: var(--surface); border: 2px solid var(--primary); border-radius: 12px; padding: 1.75rem; box-shadow: 0 4px 12px rgba(37,99,235,0.08);";
+  genCard.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;">
+      <div>
+        <span class="tag tag--intern" style="font-weight:700;">✨ Interactive AI Roadmap Generator</span>
+        <h3 style="font-size:1.2rem;margin:0.4rem 0 0.15rem;font-weight:800;">Generate Roadmap for ${student.name}</h3>
+        <p style="color:var(--muted);font-size:0.85rem;margin:0;">Reg No: <strong>${student.regNumber}</strong> · Student Profile: <strong>${student.email}</strong></p>
+      </div>
     </div>
 
-    <div class="card" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;margin-bottom:1.5rem;">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
-        <div>
-          <span class="tag tag--high">Pre-seeded Graph</span>
-          <h3 style="font-size:1.15rem;margin:0.35rem 0 0.2rem;">Full-Stack &amp; Placement Readiness Roadmap</h3>
-          <p style="color:var(--muted);font-size:0.85rem;margin:0;">Goal: Comprehensive preparation for top product &amp; service company hiring drives.</p>
+    <form id="custom-ai-roadmap-form" style="display:grid;gap:1.1rem;">
+      <div>
+        <label style="display:block;font-size:0.86rem;font-weight:700;margin-bottom:0.4rem;">
+          Target Career Goal / Dream Company Role *
+        </label>
+        <input type="text" id="custom-target-goal" class="form-input" required
+          value="${escapeHtml(student.careerGoal)}"
+          placeholder="e.g. Full-Stack SDE at Google, DevOps &amp; Cloud at AWS, AI Engineer, Zoho PPO"
+          style="width:100%;padding:0.7rem 0.85rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.92rem;">
+        
+        <!-- Quick Goal Presets -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:0.5rem;align-items:center;">
+          <span style="font-size:0.76rem;color:var(--muted);font-weight:600;">Quick Presets:</span>
+          <button type="button" class="preset-chip" data-goal="Full-Stack SDE at Product Companies (Google/Amazon)" style="font-size:0.75rem;padding:3px 9px;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text);">🚀 Product SDE</button>
+          <button type="button" class="preset-chip" data-goal="Cloud &amp; DevOps Engineer (AWS, Docker, Kubernetes)" style="font-size:0.75rem;padding:3px 9px;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text);">☁️ Cloud &amp; DevOps</button>
+          <button type="button" class="preset-chip" data-goal="AI &amp; Machine Learning Engineer (PyTorch, LLMs, RAG)" style="font-size:0.75rem;padding:3px 9px;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text);">🤖 AI &amp; ML</button>
+          <button type="button" class="preset-chip" data-goal="Backend Microservices Engineer (Java Spring Boot, PostgreSQL)" style="font-size:0.75rem;padding:3px 9px;border-radius:12px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text);">☕ Spring Boot SDE</button>
         </div>
-        <button class="btn-primary" id="btn-re-generate" style="font-size:0.85rem;">⚡ Generate AI Roadmap</button>
       </div>
 
-      <div style="display:grid;gap:0.75rem;">
-        <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
-          <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 1</div>
-          <div>
-            <div style="font-weight:600;font-size:0.9rem;">C &amp; Discrete Mathematics Fundamentals</div>
-            <div style="color:var(--muted);font-size:0.82rem;">Variables, memory allocation, pointers, Boolean algebra, logic gates.</div>
-          </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+          <label style="display:block;font-size:0.86rem;font-weight:700;margin-bottom:0.4rem;">
+            Current Semester (1 to 8)
+          </label>
+          <select id="custom-semester" style="width:100%;padding:0.7rem 0.85rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.92rem;">
+            ${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}" ${s === student.semester ? 'selected' : ''}>Semester ${s}</option>`).join("")}
+          </select>
         </div>
-
-        <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
-          <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 2</div>
-          <div>
-            <div style="font-weight:600;font-size:0.9rem;">Object-Oriented Programming (Java)</div>
-            <div style="color:var(--muted);font-size:0.82rem;">Inheritance, Polymorphism, Collections Framework, Exception Handling.</div>
-          </div>
+        <div>
+          <label style="display:block;font-size:0.86rem;font-weight:700;margin-bottom:0.4rem;">
+            Current CGPA (0.0 to 10.0)
+          </label>
+          <input type="number" id="custom-cgpa" step="0.1" min="0" max="10" value="${student.cgpa}"
+            style="width:100%;padding:0.7rem 0.85rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.92rem;">
         </div>
+      </div>
 
-        <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
-          <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 3</div>
-          <div>
-            <div style="font-weight:600;font-size:0.9rem;">Data Structures &amp; Algorithms Rigor</div>
-            <div style="color:var(--muted);font-size:0.82rem;">Arrays, Linked Lists, Stacks, Queues, Binary Trees, Time Complexity.</div>
-          </div>
+      <button type="submit" id="btn-custom-generate" class="btn-primary" style="padding:0.85rem 1.25rem;font-size:0.95rem;font-weight:700;justify-content:center;">
+        ⚡ Generate AI Career Roadmap with Gemini ➔
+      </button>
+    </form>
+  `;
+  wrap.appendChild(genCard);
+
+  // Pre-seeded Reference Timeline Card
+  var refCard = createElement("div", "card");
+  refCard.style.cssText = "background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem;";
+  refCard.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+      <div>
+        <span class="tag tag--acad">Curriculum Benchmark</span>
+        <h3 style="font-size:1.15rem;margin:0.35rem 0 0.2rem;font-weight:700;">Department Full-Stack &amp; Placement Readiness Blueprint</h3>
+        <p style="color:var(--muted);font-size:0.85rem;margin:0;">Standard semester milestone sequence recommended by CS department mentors.</p>
+      </div>
+    </div>
+
+    <div style="display:grid;gap:0.75rem;">
+      <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
+        <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 1</div>
+        <div>
+          <div style="font-weight:600;font-size:0.9rem;">C &amp; Discrete Mathematics Fundamentals</div>
+          <div style="color:var(--muted);font-size:0.82rem;">Variables, memory allocation, pointers, Boolean algebra, logic gates.</div>
         </div>
+      </div>
 
-        <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
-          <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 4</div>
-          <div>
-            <div style="font-weight:600;font-size:0.9rem;">Database Systems &amp; SQL Optimization</div>
-            <div style="color:var(--muted);font-size:0.82rem;">ACID properties, Normalization (1NF to BCNF), indexing, complex JOIN queries.</div>
-          </div>
+      <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
+        <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 2</div>
+        <div>
+          <div style="font-weight:600;font-size:0.9rem;">Object-Oriented Programming (Java)</div>
+          <div style="color:var(--muted);font-size:0.82rem;">Inheritance, Polymorphism, Collections Framework, Exception Handling.</div>
         </div>
+      </div>
 
-        <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
-          <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 5</div>
-          <div>
-            <div style="font-weight:600;font-size:0.9rem;">Web Architecture &amp; REST APIs (Spring Boot)</div>
-            <div style="color:var(--muted);font-size:0.82rem;">4-tier MVC architecture, Spring Security, JWT authentication, Hibernate JPA.</div>
-          </div>
+      <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
+        <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 3</div>
+        <div>
+          <div style="font-weight:600;font-size:0.9rem;">Data Structures &amp; Algorithms Rigor</div>
+          <div style="color:var(--muted);font-size:0.82rem;">Arrays, Linked Lists, Stacks, Queues, Binary Trees, Time Complexity.</div>
         </div>
+      </div>
 
-        <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
-          <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 6</div>
-          <div>
-            <div style="font-weight:600;font-size:0.9rem;">Operating Systems &amp; Computer Networks</div>
-            <div style="color:var(--muted);font-size:0.82rem;">Process synchronization, virtual memory, TCP/IP handshake, HTTP/HTTPS protocols.</div>
-          </div>
+      <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
+        <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 4</div>
+        <div>
+          <div style="font-weight:600;font-size:0.9rem;">Database Systems &amp; SQL Optimization</div>
+          <div style="color:var(--muted);font-size:0.82rem;">ACID properties, Normalization (1NF to BCNF), indexing, complex JOIN queries.</div>
         </div>
+      </div>
 
-        <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid #16a34a;">
-          <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:#16a34a;">Sem 7–8</div>
-          <div>
-            <div style="font-weight:600;font-size:0.9rem;">System Design &amp; Mock Placement Drives 🎯</div>
-            <div style="color:var(--muted);font-size:0.82rem;">Scalability, caching, microservices, behavioral rounds, campus recruitment.</div>
-          </div>
+      <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
+        <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 5</div>
+        <div>
+          <div style="font-weight:600;font-size:0.9rem;">Web Architecture &amp; REST APIs (Spring Boot)</div>
+          <div style="color:var(--muted);font-size:0.82rem;">4-tier MVC architecture, Spring Security, JWT authentication, Hibernate JPA.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid var(--primary);">
+        <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:var(--primary);">Sem 6</div>
+        <div>
+          <div style="font-weight:600;font-size:0.9rem;">Operating Systems &amp; Computer Networks</div>
+          <div style="color:var(--muted);font-size:0.82rem;">Process synchronization, virtual memory, TCP/IP handshake, HTTP/HTTPS protocols.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:1rem;align-items:center;padding:0.75rem 1rem;background:var(--bg);border-radius:8px;border-left:4px solid #16a34a;">
+        <div style="font-weight:700;font-size:0.85rem;min-width:65px;color:#16a34a;">Sem 7–8</div>
+        <div>
+          <div style="font-weight:600;font-size:0.9rem;">System Design &amp; Mock Placement Drives 🎯</div>
+          <div style="color:var(--muted);font-size:0.82rem;">Scalability, caching, microservices, behavioral rounds, campus recruitment.</div>
         </div>
       </div>
     </div>
   `;
+  wrap.appendChild(refCard);
 
+  // Attach event listeners for dynamic custom form & quick preset chips
   setTimeout(() => {
-    const btn = document.getElementById("btn-re-generate");
-    if (btn) {
-      btn.addEventListener("click", () => {
-        handleGenerateRoadmap(null, btn);
+    document.querySelectorAll(".preset-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const goalInput = document.getElementById("custom-target-goal");
+        if (goalInput) goalInput.value = chip.getAttribute("data-goal");
+      });
+    });
+
+    const form = document.getElementById("custom-ai-roadmap-form");
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const goal = document.getElementById("custom-target-goal").value.trim();
+        const semester = Number(document.getElementById("custom-semester").value);
+        const cgpa = Number(document.getElementById("custom-cgpa").value);
+        const btn = document.getElementById("btn-custom-generate");
+
+        // Save preferences for this student
+        saveStudentAcademicProfile(semester, cgpa, goal);
+
+        // Call the AI roadmap generator with the custom parameters
+        handleGenerateRoadmap(null, btn, goal, semester, cgpa);
       });
     }
   }, 50);
@@ -596,31 +687,70 @@ function renderRoadmapsView() {
   return frag;
 }
 
-/** Build My Profile view */
+/** Build My Profile view with real student editing */
 function renderProfile() {
+  const profile = getStudentAcademicProfile();
   var frag = document.createDocumentFragment();
 
   var header = createElement("div", "profile-view__header");
   header.appendChild(createElement("h2", "view-heading", "My Student Profile"));
-  header.appendChild(createElement("p", "view-subtitle", "View and manage your student profile and credentials."));
+  header.appendChild(createElement("p", "view-subtitle", "View and update your academic details used for personalized AI roadmaps."));
   frag.appendChild(header);
 
   var body = createElement("div", "profile-view__body");
   var card = createElement("div", "profile-card");
-  card.appendChild(createElement("span", "avatar avatar--lg", JUNIOR_PROFILE.initials));
-  card.appendChild(createElement("div", "profile-card__name", JUNIOR_PROFILE.name));
-  card.appendChild(createElement("div", "profile-card__detail", "Reg No: " + JUNIOR_PROFILE.regNumber));
-  card.appendChild(createElement("div", "profile-card__detail", JUNIOR_PROFILE.department + " · " + JUNIOR_PROFILE.year));
-  card.appendChild(createElement("div", "profile-card__detail", "Email: " + JUNIOR_PROFILE.email));
-  card.appendChild(createElement("span", "profile-card__badge", JUNIOR_PROFILE.role));
+  card.style.cssText = "max-width:650px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:2rem;";
 
-  var btn = createElement("button", "btn-primary", "Active Junior Session");
-  btn.setAttribute("type", "button");
-  btn.style.cssText = "margin-top:1rem;";
-  btn.addEventListener("click", function () {
-    showToast("Junior session active: " + JUNIOR_PROFILE.email);
-  });
-  card.appendChild(btn);
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:1.5rem;">
+      <span class="avatar avatar--lg" style="font-size:1.4rem;">${profile.initials}</span>
+      <div>
+        <div style="font-size:1.35rem;font-weight:800;color:var(--text);">${escapeHtml(profile.name)}</div>
+        <div style="color:var(--primary);font-weight:700;font-size:0.9rem;">Register No: ${escapeHtml(profile.regNumber)}</div>
+        <div style="color:var(--muted);font-size:0.85rem;">${escapeHtml(profile.email)} · ${profile.role}</div>
+      </div>
+    </div>
+
+    <form id="profile-acad-form" style="display:grid;gap:1.2rem;border-top:1px solid var(--border);padding-top:1.5rem;">
+      <h3 style="font-size:1.05rem;font-weight:700;">Academic Settings for AI Roadmap</h3>
+      <div>
+        <label style="display:block;font-size:0.86rem;font-weight:700;margin-bottom:0.35rem;">Current Semester (1 to 8)</label>
+        <select id="profile-sem" style="width:100%;padding:0.65rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.9rem;">
+          ${[1, 2, 3, 4, 5, 6, 7, 8].map(s => `<option value="${s}" ${s === profile.semester ? 'selected' : ''}>Semester ${s}</option>`).join("")}
+        </select>
+      </div>
+
+      <div>
+        <label style="display:block;font-size:0.86rem;font-weight:700;margin-bottom:0.35rem;">Current CGPA (0.0 to 10.0)</label>
+        <input type="number" id="profile-cgpa" step="0.1" min="0" max="10" value="${profile.cgpa}"
+          style="width:100%;padding:0.65rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.9rem;">
+      </div>
+
+      <div>
+        <label style="display:block;font-size:0.86rem;font-weight:700;margin-bottom:0.35rem;">Target Career Goal</label>
+        <input type="text" id="profile-goal" value="${escapeHtml(profile.careerGoal)}"
+          style="width:100%;padding:0.65rem;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:0.9rem;">
+      </div>
+
+      <button type="submit" class="btn-primary" style="justify-content:center;padding:0.75rem;font-weight:700;">
+        Save Academic Profile
+      </button>
+    </form>
+  `;
+
+  setTimeout(() => {
+    const pForm = document.getElementById("profile-acad-form");
+    if (pForm) {
+      pForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const sem = Number(document.getElementById("profile-sem").value);
+        const cgpa = Number(document.getElementById("profile-cgpa").value);
+        const goal = document.getElementById("profile-goal").value.trim();
+        saveStudentAcademicProfile(sem, cgpa, goal);
+        showToast("Academic profile saved! AI Roadmaps will now use Semester " + sem + " & CGPA " + cgpa + ".");
+      });
+    }
+  }, 50);
 
   body.appendChild(card);
   frag.appendChild(body);
@@ -628,7 +758,7 @@ function renderProfile() {
 }
 
 // ───────────────────────────────────────────
-// 6. VIEW SWITCHING
+// 6. VIEW SWITCHING & ROADMAP GENERATION
 // ───────────────────────────────────────────
 
 var currentView = "senior-posts";
@@ -667,7 +797,11 @@ function showView(viewName) {
   closeMobileSidebar();
 }
 
-async function handleGenerateRoadmap(postId, clickedButton) {
+/**
+ * Handle AI Roadmap generation for ANY post (newly published achievements or pre-seeded)
+ * and for ANY logged-in student (using their actual semester, CGPA, and name).
+ */
+async function handleGenerateRoadmap(target, clickedButton, customGoal, customSemester, customCgpa) {
   const button = clickedButton || document.querySelector(".post-card button.btn-primary");
   let token = null;
 
@@ -675,10 +809,28 @@ async function handleGenerateRoadmap(postId, clickedButton) {
     token = localStorage.getItem("jwt");
   } catch (_) {}
 
-  const post = postId ? MOCK_POSTS.find(function (item) { return item.id === postId; }) : null;
-  const goal = post
-    ? "Prepare for a software engineering career based on this senior's experience: " + post.title
-    : "Comprehensive full-stack and algorithmic preparation for top product company recruitment";
+  // Resolve target post whether passed as object or ID
+  let post = null;
+  if (typeof target === "object" && target !== null) {
+    post = target;
+  } else if (target) {
+    post = (allLoadedPosts || []).find(item => item.id === target)
+        || MOCK_POSTS.find(item => item.id === target);
+  }
+
+  const student = getStudentAcademicProfile();
+  const semester = Number(customSemester || student.semester || 3);
+  const cgpa = Number(customCgpa || student.cgpa || 8.6);
+
+  let goal;
+  if (customGoal && customGoal.trim()) {
+    goal = customGoal.trim();
+  } else if (post) {
+    // Include the actual senior's name, company, and achievement details in the goal prompt
+    goal = `Personalized career roadmap for ${student.name} (Semester ${semester}, CGPA ${cgpa}) inspired by senior playbook & achievement: "${post.title}". Senior Guide: ${post.seniorName} (${post.company || 'Industry Mentor'}). Guidance Details: ${post.summary || post.title}`;
+  } else {
+    goal = student.careerGoal || "Comprehensive full-stack and algorithmic preparation for top product company recruitment";
+  }
 
   const originalContent = button ? button.innerHTML : "";
   if (button) {
@@ -686,7 +838,7 @@ async function handleGenerateRoadmap(postId, clickedButton) {
     button.innerHTML = `⏳ Generating AI Roadmap...`;
   }
 
-  showToast("Generating your personalized AI career roadmap with Gemini...");
+  showToast("Generating personalized roadmap for " + student.name + " (Sem " + semester + ")...");
 
   try {
     const headers = { "Content-Type": "application/json" };
@@ -699,8 +851,8 @@ async function handleGenerateRoadmap(postId, clickedButton) {
       headers: headers,
       body: JSON.stringify({
         goal: goal,
-        currentSemester: 3,
-        currentCgpa: 8.9
+        currentSemester: semester,
+        currentCgpa: cgpa
       })
     });
 
@@ -716,7 +868,7 @@ async function handleGenerateRoadmap(postId, clickedButton) {
       throw new Error(result.message || "Roadmap generation failed. Please try again.");
     }
 
-    renderGeneratedRoadmap(result.data);
+    renderGeneratedRoadmap(result.data, student, post);
     showToast("Personalized AI Career Roadmap generated successfully!");
   } catch (error) {
     console.error("Roadmap generation error:", error);
@@ -733,7 +885,7 @@ async function handleGenerateRoadmap(postId, clickedButton) {
   }
 }
 
-function renderGeneratedRoadmap(data) {
+function renderGeneratedRoadmap(data, student, sourcePost) {
   mainContent.textContent = "";
 
   const wrap = createElement("div", "senior-posts-feed");
@@ -742,24 +894,35 @@ function renderGeneratedRoadmap(data) {
   const topBar = createElement("div", "");
   topBar.style.cssText = "display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;";
 
-  const backButton = createElement("button", "btn-primary", "← Back to Senior Experiences");
+  const backButton = createElement("button", "btn-primary", "← Back to Guidance Feed");
   backButton.type = "button";
   backButton.addEventListener("click", function () {
     showView("senior-posts");
   });
   topBar.appendChild(backButton);
 
-  const badge = createElement("span", "tag tag--high", "✨ Gemini AI Generated");
+  const badge = createElement("span", "tag tag--high", "✨ Gemini AI Generated Roadmap");
   topBar.appendChild(badge);
   wrap.appendChild(topBar);
 
   const headerCard = createElement("div", "card");
-  headerCard.style.cssText = "background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;";
+  headerCard.style.cssText = "background: var(--surface); border: 2px solid var(--primary); border-radius: 12px; padding: 1.75rem;";
+  
+  let seniorCredit = "";
+  if (sourcePost) {
+    seniorCredit = `<div style="margin-top:0.5rem;padding:0.5rem 0.75rem;background:var(--bg);border-radius:6px;font-size:0.83rem;color:var(--text);border-left:3px solid var(--primary);">
+      💡 Inspired by Senior Guide: <strong>${escapeHtml(sourcePost.seniorName)}</strong> (${escapeHtml(sourcePost.company || 'Industry')}) — <em>${escapeHtml(sourcePost.title)}</em>
+    </div>`;
+  }
+
   headerCard.innerHTML = `
     <h2 class="view-heading" style="margin-bottom: 0.5rem;">Personalized AI Career Roadmap</h2>
-    <p class="view-subtitle" style="margin-bottom: 0.75rem;"><strong>Target Goal:</strong> ${data.goal}</p>
-    <div style="display: flex; gap: 1.25rem; font-size: 0.85rem; color: var(--muted); flex-wrap: wrap;">
-      <span><strong>Current Semester:</strong> ${data.currentSemester || 3}</span>
+    <p class="view-subtitle" style="margin-bottom: 0.75rem;"><strong>Roadmap Target:</strong> ${escapeHtml(data.goal)}</p>
+    ${seniorCredit}
+    <div style="display: flex; gap: 1.25rem; font-size: 0.85rem; color: var(--muted); flex-wrap: wrap; margin-top:0.75rem;">
+      <span><strong>Student:</strong> ${escapeHtml(student ? student.name : 'Junior Student')} (${escapeHtml(student ? student.regNumber : '')})</span>
+      <span>•</span>
+      <span><strong>Starting Semester:</strong> Semester ${data.currentSemester || (student ? student.semester : 3)}</span>
       <span>•</span>
       <span><strong>Milestones:</strong> ${(data.adaptiveMilestones || []).length} sequential steps</span>
       <span>•</span>
