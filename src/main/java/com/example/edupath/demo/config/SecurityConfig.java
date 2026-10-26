@@ -71,7 +71,7 @@ public class SecurityConfig {
                 ).permitAll()
 
                 // Public authentication and documentation/health endpoints
-                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/health", "/h2-console/**").permitAll()
+                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/health", "/h2-console/**", "/api/v1/ai-assistant/**").permitAll()
 
                 // QA Forum compatibility endpoints
                 .requestMatchers(

@@ -293,7 +293,7 @@ async function renderPostsList(container, categoryFilter) {
     </svg> Generate Personalized Roadmap`;
     btn.setAttribute("type", "button");
     btn.addEventListener("click", function () {
-      handleGenerateRoadmap(post.id);
+      handleGenerateRoadmap(post.id, btn);
     });
 
     card.appendChild(btn);
@@ -587,7 +587,7 @@ function renderRoadmapsView() {
     const btn = document.getElementById("btn-re-generate");
     if (btn) {
       btn.addEventListener("click", () => {
-        showToast("AI Career Roadmap generated with 7 milestone nodes and 6 directed prerequisite edges!");
+        handleGenerateRoadmap(null, btn);
       });
     }
   }, 50);
@@ -667,9 +667,151 @@ function showView(viewName) {
   closeMobileSidebar();
 }
 
-function handleGenerateRoadmap(postId) {
-  showToast("Personalized AI Career Roadmap generated! Switched to AI Roadmaps view.");
-  showView("career-roadmaps");
+async function handleGenerateRoadmap(postId, clickedButton) {
+  const button = clickedButton || document.querySelector(".post-card button.btn-primary");
+  let token = null;
+
+  try {
+    token = localStorage.getItem("jwt");
+  } catch (_) {}
+
+  const post = postId ? MOCK_POSTS.find(function (item) { return item.id === postId; }) : null;
+  const goal = post
+    ? "Prepare for a software engineering career based on this senior's experience: " + post.title
+    : "Comprehensive full-stack and algorithmic preparation for top product company recruitment";
+
+  const originalContent = button ? button.innerHTML : "";
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = `⏳ Generating AI Roadmap...`;
+  }
+
+  showToast("Generating your personalized AI career roadmap with Gemini...");
+
+  try {
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = "Bearer " + token;
+    }
+
+    const response = await fetch("/api/v1/ai-assistant/generate-path", {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify({
+        goal: goal,
+        currentSemester: 3,
+        currentCgpa: 8.9
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      if (response.status === 401) {
+        throw new Error("Your session has expired. Please log in again.");
+      }
+      if (response.status === 403) {
+        throw new Error("You don't have permission to generate this roadmap.");
+      }
+      throw new Error(result.message || "Roadmap generation failed. Please try again.");
+    }
+
+    renderGeneratedRoadmap(result.data);
+    showToast("Personalized AI Career Roadmap generated successfully!");
+  } catch (error) {
+    console.error("Roadmap generation error:", error);
+    showToast(
+      error.message && error.message.includes("Failed to fetch")
+        ? "Cannot connect to backend server. Ensure Spring Boot is running."
+        : error.message || "Failed to generate roadmap."
+    );
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = originalContent;
+    }
+  }
+}
+
+function renderGeneratedRoadmap(data) {
+  mainContent.textContent = "";
+
+  const wrap = createElement("div", "senior-posts-feed");
+  wrap.style.cssText = "max-width: 900px; margin: 0 auto; display: grid; gap: 1.5rem;";
+
+  const topBar = createElement("div", "");
+  topBar.style.cssText = "display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;";
+
+  const backButton = createElement("button", "btn-primary", "← Back to Senior Experiences");
+  backButton.type = "button";
+  backButton.addEventListener("click", function () {
+    showView("senior-posts");
+  });
+  topBar.appendChild(backButton);
+
+  const badge = createElement("span", "tag tag--high", "✨ Gemini AI Generated");
+  topBar.appendChild(badge);
+  wrap.appendChild(topBar);
+
+  const headerCard = createElement("div", "card");
+  headerCard.style.cssText = "background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;";
+  headerCard.innerHTML = `
+    <h2 class="view-heading" style="margin-bottom: 0.5rem;">Personalized AI Career Roadmap</h2>
+    <p class="view-subtitle" style="margin-bottom: 0.75rem;"><strong>Target Goal:</strong> ${data.goal}</p>
+    <div style="display: flex; gap: 1.25rem; font-size: 0.85rem; color: var(--muted); flex-wrap: wrap;">
+      <span><strong>Current Semester:</strong> ${data.currentSemester || 3}</span>
+      <span>•</span>
+      <span><strong>Milestones:</strong> ${(data.adaptiveMilestones || []).length} sequential steps</span>
+      <span>•</span>
+      <span><strong>Skills Identified:</strong> ${(data.recommendedRoadmapSkills || []).length} core technologies</span>
+    </div>
+  `;
+  wrap.appendChild(headerCard);
+
+  // Milestones
+  const milestonesCard = createElement("div", "card");
+  milestonesCard.style.cssText = "background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;";
+  milestonesCard.appendChild(createElement("h3", "post-card__journey-heading", "Semester-Wise Adaptive Milestones"));
+
+  const timeline = createElement("div", "timeline");
+  (data.adaptiveMilestones || []).forEach(function (milestone, idx) {
+    const step = createElement("div", "timeline__step");
+    const yearEl = createElement("span", "timeline__year", "Step " + (idx + 1));
+    const descEl = createElement("p", "timeline__desc", milestone);
+    step.appendChild(yearEl);
+    step.appendChild(descEl);
+    timeline.appendChild(step);
+  });
+  milestonesCard.appendChild(timeline);
+  wrap.appendChild(milestonesCard);
+
+  // Recommended Skills
+  const skillsCard = createElement("div", "card");
+  skillsCard.style.cssText = "background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;";
+  skillsCard.appendChild(createElement("h3", "post-card__journey-heading", "Recommended Technical Skills"));
+
+  const skillsWrap = createElement("div", "post-card__tags");
+  skillsWrap.style.cssText = "display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem;";
+  (data.recommendedRoadmapSkills || []).forEach(function (skill) {
+    skillsWrap.appendChild(createElement("span", "tag tag--acad", skill));
+  });
+  skillsCard.appendChild(skillsWrap);
+  wrap.appendChild(skillsCard);
+
+  // Senior Mentor Advice
+  const adviceCard = createElement("article", "post-card");
+  adviceCard.style.cssText = "background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--primary); border-radius: 12px; padding: 1.5rem;";
+  adviceCard.appendChild(createElement("h3", "post-card__title", "💡 Senior Mentor Advice"));
+  adviceCard.appendChild(
+    createElement(
+      "p",
+      "post-card__summary",
+      data.seniorMentorAdvice || "Focus consistently on coding problem solving and build projects that demonstrate clean system architecture."
+    )
+  );
+  wrap.appendChild(adviceCard);
+
+  mainContent.appendChild(wrap);
 }
 
 function injectMobileSidebarControls() {
